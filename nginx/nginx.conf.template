@@ -1,0 +1,48 @@
+upstream site {
+    server site:8000;
+}
+
+server {
+    listen 80 default_server;
+
+    server_name _;
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${HOST_NAME} www.${HOST_NAME};
+    ssl_certificate /etc/ssl/mycego/mycego_online.crt;
+    ssl_certificate_key /etc/ssl/mycego/mycego_online.key;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_stapling on;
+    ssl_trusted_certificate /etc/ssl/mycego/ca.crt;
+    resolver 8.8.8.8;
+    client_max_body_size 1024M;
+    client_body_timeout 500s;
+    root /www/data;
+    gzip on;
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log warn;
+
+    location /static {
+        alias /www/data/static;
+    }
+    location /media {
+        alias /www/data/media;
+    }
+
+    location / {
+        try_files $uri $uri/index.html @backend;
+    }
+
+    location @backend {
+        proxy_pass http://site;
+        proxy_set_header Host $host:$server_port;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}

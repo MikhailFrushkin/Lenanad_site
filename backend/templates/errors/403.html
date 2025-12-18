@@ -1,0 +1,53 @@
+{% extends 'index.html' %}
+{% load static %}
+{% load cache %}
+{% load humanize %}
+{% load work_schedule_tags %}
+
+{% block title %}
+Сюда нельзя!
+{% endblock %}
+
+{% block content %}
+<style>
+    .fa.fa-ban {
+        font-size: 40rem;
+    }
+    .ban-header {
+        font-size: 5rem;
+        animation: glowText 1s infinite alternate;
+    }
+    .ban-container {
+        padding: 0;
+    }
+    .ban-content {
+        padding: 0;
+        background-color: red;
+        border-radius: 50%;
+        animation: glow 1s infinite alternate;
+    }
+
+    @keyframes glow {
+        from {
+            box-shadow: 0 0 10px -10px red;
+        }
+        to {
+            box-shadow: 0 0 10px 10px red;
+        }
+    }
+    @keyframes glowText {
+        from {
+            color: black;
+        }
+        to {
+            color: red;
+        }
+    }
+</style>
+
+<h1 class="text-center ban-header">Вам сюда нельзя</h1>
+<div class="text-center ban-container">
+    <i class="fa fa-ban text-white ban-content" aria-hidden="true"></i>
+</div>
+
+{% endblock %}

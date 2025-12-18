@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8"/>
+
+    <title>
+        {% block title %}
+        Lemanad Pro
+        {% endblock %}
+    </title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <meta content=""
+          name="description"/>
+    <meta content="" name="author"/>
+    <link rel="shortcut icon" href="{% static 'assets/img/lemonade_png (2).png' %}">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap" rel="stylesheet">
+    <link href="{% static 'assets/vendor/material-icons/material-icons.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/vendor/flags/css/flag-icon.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/vendor/daterangepicker-master/daterangepicker.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/vendor/jquery-jvectormap/jquery-jvectormap-2.0.3.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/vendor/DataTables-1.10.18/css/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/vendor/DataTables-1.10.18/css/responsive.dataTables.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/css/style-darkblue-dark.css' %}" rel="stylesheet" id="stylelink">
+</head>
+<body class="sidemenu-open">
+<div class="loader container-fluid" id="pageLoader">
+    <div class="row h-100">
+        <div class="col-auto align-self-center  mx-auto text-center">
+            <div class="loader-ripple">
+                <div></div>
+                <div></div>
+            </div>
+            <h2>Lenamad PRO</h2>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar -->
+{% include 'includes/sidebar.html' %}
+
+<!-- wrapper starts -->
+<div class="wrapper">
+    <div class="content shadow-sm">
+        <!-- Navigation -->
+        {% include 'includes/nav.html' %}
+
+        <!-- Main container starts -->
+        <div class="container main-container" id="main-container">
+            {% block content %}
+            <div class="row">
+                <div class="col-12">
+                    <h1>Ваш контент здесь</h1>
+                    <p>Это основное содержимое страницы</p>
+                </div>
+            </div>
+            {% endblock %}
+        </div>
+        <!-- Main container ends -->
+
+    </div>
+
+    <!-- Footer -->
+    {% include 'includes/footer.html' %}
+</div>
+
+<!-- Theme picker modal -->
+{% include 'includes/theme_modal.html' %}
+
+<!-- Global js mandatory -->
+<script src="{% static 'assets/js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'assets/js/popper.min.js' %}"></script>
+<script src="{% static 'assets/vendor/bootstrap/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'assets/vendor/cookie/jquery.cookie.js' %}"></script>
+<!-- Global js ends -->
+
+<!-- Vendor or 3rd party js -->
+<!-- Chart js -->
+<script src="{% static 'assets/vendor/chartjs/Chart.min.js' %}"></script>
+<script src="{% static 'assets/vendor/chartjs/utils.js' %}"></script>
+<!-- date range picker -->
+<script src="{% static 'assets/vendor/daterangepicker-master/moment.min.js' %}"></script>
+<script src="{% static 'assets/vendor/daterangepicker-master/daterangepicker.js' %}"></script>
+<!-- DataTables js  -->
+<script src="{% static 'assets/vendor/DataTables-1.10.18/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'assets/vendor/DataTables-1.10.18/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'assets/vendor/DataTables-1.10.18/js/dataTables.bootstrap4.min.js' %}"></script>
+<!-- Circular progress js  -->
+<script src="{% static 'assets/vendor/circle-progress/circle-progress.min.js' %}"></script>
+<!-- vector maps js  -->
+<script src="{% static 'assets/vendor/jquery-jvectormap/jquery-jvectormap.js' %}"></script>
+<script src="{% static 'assets/vendor/jquery-jvectormap/jquery-jvectormap-world-mill-en.js' %}"></script>
+<!-- Vendor or 3rd party js ends -->
+
+<!-- Customized template js mandatory -->
+<script src="{% static 'assets/js/main.js' %}"></script>
+<!-- Customized template js ends -->
+
+<!-- theme picker -->
+<script src="{% static 'assets/js/style-picker.js' %}"></script>
+<!-- theme picker ends -->
+
+<!-- Customized page level js -->
+<script src="{% static 'assets/js/social-dashboard.js' %}"></script>
+<script>
+    'use strict'
+    $(document).ready(function() {
+        // Ваш код инициализации
+    });
+</script>
+
+</body>
+</html>

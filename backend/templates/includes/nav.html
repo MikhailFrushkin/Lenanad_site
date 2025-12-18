@@ -1,0 +1,104 @@
+{% load static %}
+<div class="container-fluid header-container">
+    <div class="row header">
+        <div class="container-fluid " id="header-container">
+            <div class="row">
+                <!-- Header starts -->
+                <nav class="navbar col-12 navbar-expand ">
+                    <button class="menu-btn btn btn-link btn-sm" type="button">
+                        <i class="material-icons">menu</i>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                        <!-- search starts -->
+                        <form class="form-inline search mr-auto">
+                            <input class="form-control form-control-sm" type="search" placeholder="Search"
+                                   aria-label="Search">
+                            <button class="btn btn-link btn-sm" type="submit"><i
+                                    class="material-icons">search</i></button>
+                        </form>
+                        <ul class="navbar-nav ml-auto">
+                            <!-- profile dropdown-->
+                            <li class="nav-item dropdown ml-0 ml-sm-4">
+                                <a class="nav-link dropdown-toggle profile-link" href="#" id="navbarDropdown6"
+                                   role="button" data-toggle="dropdown" aria-haspopup="true"
+                                   aria-expanded="false">
+                                    <figure class="rounded avatar avatar-30">
+                                        <img src="{% static 'assets/img/user_test.png' %}" alt="">
+                                    </figure>
+                                    <div class="username-text ml-2 mr-2 d-none d-lg-inline-block">
+                                        <h6 class="username"><span>Welcome,</span>{{ user.username|default:"User" }}
+                                        </h6>
+                                    </div>
+                                    <figure class="rounded avatar avatar-30 d-none d-md-inline-block">
+                                        <i class="material-icons">expand_more</i>
+                                    </figure>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right w-300 pt-0 overflow-hidden"
+                                     aria-labelledby="navbarDropdown6">
+                                    <div class="position-relative text-center rounded py-5">
+                                        <div class="background">
+                                            <img src="{% static 'assets/img/background-part.png' %}" alt="">
+                                        </div>
+                                    </div>
+                                    <div class="text-center mb-3 top-60 z-2">
+                                        <figure class="avatar avatar-120 mx-auto shadow"><img
+                                                src="{% static 'assets/img/user_test.png' %}" alt=""></figure>
+                                    </div>
+                                    <h5 class="text-center mb-0">{{ user.username|default:"User" }}</h5>
+                                    <p class="text-center">Должность</p>
+                                    <p class="text-center text-secondary fs13">Страна, город, магазин</p>
+                                    <a class="dropdown-item border-top" href="#">
+                                        <div class="row">
+                                            <div class="col-auto align-self-center">
+                                                <i class="material-icons text-success">account_box</i>
+                                            </div>
+                                            <div class="col pl-0">
+                                                <p class="mb-0">Мой профиль</p>
+                                                <p class="small text-mute text-trucated">Информация о профиле</p>
+                                            </div>
+                                            <div class="col-auto align-self-center text-right pl-0">
+                                                <i class="material-icons text-mute small">chevron_right</i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <a class="dropdown-item border-top" href="#">
+                                        <div class="row">
+                                            <div class="col-auto align-self-center">
+                                                <i class="material-icons text-warning">date_range</i>
+                                            </div>
+                                            <div class="col pl-0">
+                                                <p class="mb-0">Календарь</p>
+                                            </div>
+                                            <div class="col-auto align-self-center text-right pl-0">
+                                                <i class="material-icons text-mute small">chevron_right</i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <form method="post" action="{% url 'home:logout' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <a class="dropdown-item border-top" href="#"
+                                           onclick="this.closest('form').submit(); return false;">
+                                            <div class="row">
+                                                <div class="col-auto align-self-center">
+                                                    <i class="material-icons text-danger">exit_to_app</i>
+                                                </div>
+                                                <div class="col pl-0">
+                                                    <p class="mb-0 text-danger">Выйти</p>
+                                                </div>
+                                                <div class="col-auto align-self-center text-right pl-0">
+                                                    <i class="material-icons text-mute small text-danger">chevron_right</i>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </form>
+                                </div>
+                            </li>
+                        </ul>
+                        <!-- icons dropwdowns starts -->
+                    </div>
+                </nav>
+                <!-- Header ends -->
+            </div>
+        </div>
+    </div>
+</div>
