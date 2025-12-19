@@ -1,4 +1,4 @@
-# docker-compose.yaml
+# docker-compose.yaml с root пользователем
 version: '3.8'
 
 services:
@@ -7,15 +7,15 @@ services:
     container_name: django_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-lemana_pro_online}
-      POSTGRES_USER: ${DB_USER:-admin_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-fma160392}
+      POSTGRES_DB: lemana_pro_online
+      POSTGRES_USER: admin_user
+      POSTGRES_PASSWORD: fma160392
     ports:
-      - "${DB_PORT:-5433}:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin_user} -d ${DB_NAME:-lemana_pro_online}"]  # Исправлено
+      test: ["CMD-SHELL", "pg_isready -U admin_user -d lemana_pro_online"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,27 +28,24 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "${DJANGO_PORT:-8001}:8000"
+      - "8001:8000"
     volumes:
       - .:/app
-      - static_volume:/static  # Изменено с /app/static
-      - media_volume:/media    # Изменено с /app/media
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     environment:
-      - DEBUG=${DEBUG:-1}
-      - SECRET_KEY=${SECRET_KEY}
-      - DB_NAME=${DB_NAME:-lemana_pro_online}
-      - DB_USER=${DB_USER:-admin_user}
-      - DB_PASSWORD=${DB_PASSWORD:-fma160392}
-      - DB_HOST=db
-      - DB_PORT=5432
-      - HOST_NAME=${HOST_NAME:-localhost}
-    user: "1000:1000"  # Используем UID 1000 (обычный пользователь)
+      DEBUG: "1"
+      SECRET_KEY: "django-insecure-wt3wvpczx$f&i_@grudacc0t%pk=e%me)nwd2=$#8_wu8!a4$b"
+      DB_NAME: "lemana_pro_online"
+      DB_USER: "admin_user"
+      DB_PASSWORD: "fma160392"
+      DB_HOST: "db"
+      DB_PORT: "5432"
+      HOST_NAME: "lemana-pro.online"
     command: >
-      sh -c "echo 'Waiting for database...' &&
-             sleep 3 &&
+      sh -c "sleep 3 &&
              python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
-             echo 'Starting Gunicorn...' &&
              exec gunicorn --bind 0.0.0.0:8000 --workers 3 backend.wsgi:application"
 
 volumes:
