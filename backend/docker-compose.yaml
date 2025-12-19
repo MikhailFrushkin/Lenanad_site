@@ -1,3 +1,4 @@
+# docker-compose.yaml
 version: '3.8'
 
 services:
@@ -6,16 +7,15 @@ services:
     container_name: django_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-lemana_pro_online}
+      POSTGRES_USER: ${DB_USER:-admin_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-fma160392}
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin_user}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,27 +28,28 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "${DJANGO_PORT}:8000"
+      - "${DJANGO_PORT:-8001}:8000"
     volumes:
       - .:/app
       - static_volume:/app/static
       - media_volume:/app/media
       - cache_volume:/app/django_cache
     environment:
-      - DEBUG=${DEBUG}
-      - SECRET_KEY=${SECRET_KEY}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DEBUG=${DEBUG:-1}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-wt3wvpczx$f&i_@grudacc0t%pk=e%me)nwd2=$#8_wu8!a4$b}
+      - DB_NAME=${DB_NAME:-lemana_pro_online}
+      - DB_USER=${DB_USER:-admin_user}
+      - DB_PASSWORD=${DB_PASSWORD:-fma160392}
+      - DB_HOST=db
       - DB_PORT=5432
-      - HOST_NAME=${HOST_NAME}
-      - DJANGO_SETTINGS_MODULE=backend.settings
+      - HOST_NAME=${HOST_NAME:-localhost}
     command: >
-      sh -c "python manage.py migrate --noinput &&
+      sh -c "echo 'Waiting for database...' &&
+             sleep 3 &&
+             python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 backend.wsgi:application"
-    env_file:
-      - .env
+             echo 'Starting Gunicorn...' &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --access-logfile - backend.wsgi:application"
 
 volumes:
   postgres_data:

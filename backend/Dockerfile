@@ -24,11 +24,13 @@ COPY . /app/
 # Создаем директорию для статики
 RUN mkdir -p /app/static /app/media /app/django_cache
 
-# Собираем статику (будет выполнена позже)
-# RUN python manage.py collectstatic --noinput
+# Создаем не-root пользователя для безопасности
+RUN adduser --disabled-password --gecos '' django-user && \
+    chown -R django-user:django-user /app
+USER django-user
 
 # Открываем порт
 EXPOSE 8000
 
-# Запускаем сервер
+# Команда по умолчанию
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "backend.wsgi:application"]
