@@ -12,6 +12,7 @@ DB_NAME = env.str("DB_NAME")
 DB_USER = env.str("DB_USER")
 DB_PASSWORD = env.str("DB_PASSWORD")
 DB_PORT = env.str("DB_PORT")
+POSTGRES_HOST = env.str("POSTGRES_HOST", "db")
 
 DEBUG = os.getenv("DEBUG", "1") == "1"
 BASE_URL = "https://lemana-pro.online"
@@ -113,7 +114,7 @@ DATABASES = {
         'NAME': DB_NAME,
         'USER': DB_USER,
         'PASSWORD': DB_PASSWORD,
-        'HOST': 'localhost',
+        'HOST': POSTGRES_HOST,
         'PORT': DB_PORT,
     }
 }
