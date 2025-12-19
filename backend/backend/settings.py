@@ -17,6 +17,7 @@ POSTGRES_HOST = env.str("POSTGRES_HOST", "db")
 DEBUG = os.getenv("DEBUG", "1") == "1"
 BASE_URL = "https://lemana-pro.online"
 ALLOWED_HOSTS = [os.getenv("HOST_NAME", "0.0.0.0"), f"www.{os.getenv('HOST_NAME')}"]
+logger.debug(ALLOWED_HOSTS)
 if DEBUG:
     ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
 CSRF_TRUSTED_ORIGINS = [
@@ -64,10 +65,14 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Для debug toolbar
-DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
-}
+if not DEBUG:
+    INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'debug_toolbar']
+    MIDDLEWARE = [mw for mw in MIDDLEWARE if mw != 'debug_toolbar.middleware.DebugToolbarMiddleware']
+else:
+    # Для debug toolbar
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+    }
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
