@@ -21,13 +21,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Копируем остальной код проекта
 COPY . /app/
 
-# Создаем директорию для статики
-RUN mkdir -p /app/static /app/media /app/django_cache
-
-# Создаем не-root пользователя для безопасности
-RUN adduser --disabled-password --gecos '' django-user && \
-    chown -R django-user:django-user /app
-USER django-user
+# Создаем директории и устанавливаем права
+RUN mkdir -p /static /media /app/django_cache \
+    && chmod 755 /static /media /app/django_cache
 
 # Открываем порт
 EXPOSE 8000
