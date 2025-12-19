@@ -2,17 +2,15 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from dotenv import load_dotenv
 
 
 def main():
     """Run administrative tasks."""
+    # Загружаем переменные окружения из .env
+    load_dotenv()
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-
-    # Импорт для отладки
-    if os.environ.get('RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN'):
-        import ptvsd
-        ptvsd.enable_attach(address=('0.0.0.0', 5678))
-
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
