@@ -177,3 +177,8 @@ dbdata/
 
 # /media/
 !/media/.gitkeep
+
+data/
+!.gitkeep
+data/*/
+!data/*/.gitkeep
