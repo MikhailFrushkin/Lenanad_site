@@ -8,19 +8,54 @@
             <p class="text-uppercase fs11"></p>
         </div>
     </a>
-    <h6 class="subtitle fs11">Меню</h6>
     <ul class="nav flex-column">
         <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="javascript:void(0)"><i
-                    class="material-icons icon">dashboard</i><span>Dashboard</span> <i class="material-icons arrow">expand_more</i></a>
-            <div class="nav flex-column">
-                <div class="nav-item"><a class="nav-link" href="dashboard-production.html"><span>Production</span></a>
+            <a class="nav-link dropdown-toggle active" href="javascript:void(0)"><i
+                    class="material-icons icon">games</i><span>Линолеум</span> <i class="material-icons arrow">expand_more</i></a>
+            <div class="nav flex-column" style="display: none;">
+                <div class="nav-item"><a class="nav-link" href="{% url 'home:index' %}"><span>Таблица с заказами</span></a>
                 </div>
-                <div class="nav-item"><a class="nav-link" href="dashboard-networking.html"><span>Networking</span></a>
+                <div class="nav-item"><a class="nav-link" href="{% url 'home:index' %}"><span>Статистика</span></a>
                 </div>
             </div>
         </li>
-        <!-- Добавьте дополнительные пункты меню здесь -->
+    </ul>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'home:index' %}"><i
+                    class="material-icons icon">turned_in_not</i><span>Частички</span></a>
+        </li>
+    </ul>
+    <ul class="nav flex-column">
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="javascript:void(0)"><i class="material-icons icon">storage</i><span>Погрузка</span>
+                <i class="material-icons arrow">expand_more</i></a>
+            <div class="nav flex-column" style="display: none;">
+                <div class="nav-item"><a class="nav-link" href="{% url 'home:index' %}"><span>Время погрузки</span></a>
+                </div>
+                <div class="nav-item"><a class="nav-link" href="{% url 'home:index' %}"><span>Чек-листы</span></a></div>
+                <div class="nav-item"><a class="nav-link"
+                                         href="{% url 'home:index' %}"><span>Статистика по сборке</span></a></div>
+            </div>
+        </li>
+    </ul>
+    <ul class="nav flex-column">
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="javascript:void(0)"><i class="material-icons icon">library_books</i><span>Довозы</span>
+                <i class="material-icons arrow">expand_more</i></a>
+            <div class="nav flex-column" style="display: none;">
+                <div class="nav-item"><a class="nav-link" href="{% url 'home:index' %}"><span>Записать довоз</span></a>
+                </div>
+                <div class="nav-item"><a class="nav-link"
+                                         href="{% url 'home:index' %}"><span>Статистика по довозам</span></a></div>
+            </div>
+        </li>
+    </ul>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'home:index' %}"><i
+                    class="material-icons icon">filter_none</i><span>Полезные ссылки</span></a>
+        </li>
     </ul>
 </div>
 <!-- Sidebar ends -->

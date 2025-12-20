@@ -49,7 +49,7 @@ class UserLogout(LogoutView):
 
 
 class MainPage(LoginRequiredMixin, TemplateView):
-    template_name = "base.html"
+    template_name = "main_page.html"
     login_url = "home:login"
 
     def get_context_data(self, **kwargs):
