@@ -23,10 +23,10 @@
                                    role="button" data-toggle="dropdown" aria-haspopup="true"
                                    aria-expanded="false">
                                     <figure class="rounded avatar avatar-30">
-                                        <img src="{% static 'assets/img/user_test.png' %}" alt="">
+                                        <img src="{{ user.photo.url }}" alt="">
                                     </figure>
                                     <div class="username-text ml-2 mr-2 d-none d-lg-inline-block">
-                                        <h6 class="username"><span>Welcome,</span>{{ user.username|default:"User" }}
+                                        <h6 class="username"><span>Привет,</span>{{ user.username|default:"User" }}
                                         </h6>
                                     </div>
                                     <figure class="rounded avatar avatar-30 d-none d-md-inline-block">
@@ -41,26 +41,59 @@
                                         </div>
                                     </div>
                                     <div class="text-center mb-3 top-60 z-2">
-                                        <figure class="avatar avatar-120 mx-auto shadow"><img
-                                                src="{% static 'assets/img/user_test.png' %}" alt=""></figure>
+                                        <figure class="avatar avatar-120 mx-auto shadow">
+                                            {% if user.photo %}
+                                            <img src="{{ user.photo.url }}"
+                                                 alt="{{ user.get_full_name_display|default:user.username }}"
+                                                 class="rounded-circle"
+                                                 style="width: 120px; height: 120px; object-fit: cover;">
+                                            {% else %}
+                                            <img src="{% static 'assets/img/user_test.png' %}"
+                                                 alt="{{ user.get_full_name_display|default:user.username }}"
+                                                 class="rounded-circle">
+                                            {% endif %}
+                                        </figure>
                                     </div>
-                                    <h5 class="text-center mb-0">{{ user.username|default:"User" }}</h5>
-                                    <p class="text-center">Должность</p>
-                                    <p class="text-center text-secondary fs13">Страна, город, магазин</p>
-                                    <a class="dropdown-item border-top" href="#">
+
+                                    <h5 class="text-center mb-0">
+                                        {{ user.get_full_name_display|default:user.username|default:"Пользователь" }}
+                                    </h5>
+
+                                    <p class="text-center">
+                                        {% if user.role and user.role.name %}
+                                        {{ user.role.name }}
+                                        {% else %}
+                                        Должность не указана
+                                        {% endif %}
+                                    </p>
+
+                                    <p class="text-center text-secondary fs13">
+                                        {% with country=user.country.name|default:"Не указано" city=user.city.name|default:"Не указано" store=user.store.name|default:"Не указано" %}
+                                        {{ country }}{% if city %}, {{ city }}{% endif %}{% if store %}, {{ store }}{% endif %}
+                                        {% endwith %}
+                                    </p>
+
+                                    <a class="dropdown-item border-top" href="">
                                         <div class="row">
                                             <div class="col-auto align-self-center">
                                                 <i class="material-icons text-success">account_box</i>
                                             </div>
                                             <div class="col pl-0">
                                                 <p class="mb-0">Мой профиль</p>
-                                                <p class="small text-mute text-trucated">Информация о профиле</p>
+                                                <p class="small text-mute text-truncated">
+                                                    {% if user.department and user.department.name %}
+                                                    {{ user.department.name }}
+                                                    {% else %}
+                                                    Информация о профиле
+                                                    {% endif %}
+                                                </p>
                                             </div>
                                             <div class="col-auto align-self-center text-right pl-0">
                                                 <i class="material-icons text-mute small">chevron_right</i>
                                             </div>
                                         </div>
                                     </a>
+
                                     <a class="dropdown-item border-top" href="#">
                                         <div class="row">
                                             <div class="col-auto align-self-center">
@@ -68,12 +101,76 @@
                                             </div>
                                             <div class="col pl-0">
                                                 <p class="mb-0">Календарь</p>
+                                                <p class="small text-mute text-truncated">
+                                                    {% if user.birth_date %}
+                                                    ДР: {{ user.birth_date|date:"d.m.Y" }}
+                                                    {% else %}
+                                                    Планирование
+                                                    {% endif %}
+                                                </p>
                                             </div>
                                             <div class="col-auto align-self-center text-right pl-0">
                                                 <i class="material-icons text-mute small">chevron_right</i>
                                             </div>
                                         </div>
                                     </a>
+
+                                    {% if user.phone_number or user.telegram %}
+                                    <a class="dropdown-item border-top" href="#">
+                                        <div class="row">
+                                            <div class="col-auto align-self-center">
+                                                <i class="material-icons text-info">contact_phone</i>
+                                            </div>
+                                            <div class="col pl-0">
+                                                <p class="mb-0">Контакты</p>
+                                                <p class="small text-mute text-truncated">
+                                                    {% if user.phone_number %}
+                                                    {{ user.phone_number }}
+                                                    {% elif user.telegram %}
+                                                    @{{ user.telegram }}
+                                                    {% else %}
+                                                    Контактная информация
+                                                    {% endif %}
+                                                </p>
+                                            </div>
+                                            <div class="col-auto align-self-center text-right pl-0">
+                                                <i class="material-icons text-mute small">chevron_right</i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    {% endif %}
+
+                                    {% if user.status_work and user.status_work != "Работа" %}
+                                    <div class="dropdown-item border-top">
+                                        <div class="row">
+                                            <div class="col-auto align-self-center">
+                                                <i class="material-icons text-{% if user.status_work == 'Уволен' %}danger{% else %}warning{% endif %}">
+                                                    {% if user.status_work == 'Отпуск' %}beach_access
+                                                    {% elif user.status_work == 'Больничный' %}local_hospital
+                                                    {% elif user.status_work == 'Уволен' %}block
+                                                    {% else %}work{% endif %}
+                                                </i>
+                                            </div>
+                                            <div class="col pl-0">
+                                                <p class="mb-0">
+                                                    Статус:
+                                                    <span class="badge badge-{% if user.status_work == 'Уволен' %}danger
+                                           {% elif user.status_work == 'Отпуск' %}success
+                                           {% elif user.status_work == 'Больничный' %}warning
+                                           {% else %}primary{% endif %}">
+                        {{ user.status_work }}
+                    </span>
+                                                </p>
+                                                <p class="small text-mute text-truncated">
+                                                    {% if user.last_input_main %}
+                                                    Активность: {{ user.last_input_main|timesince }} назад
+                                                    {% endif %}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
                                     <form method="post" action="{% url 'home:logout' %}" class="d-inline">
                                         {% csrf_token %}
                                         <a class="dropdown-item border-top" href="#"
@@ -84,6 +181,11 @@
                                                 </div>
                                                 <div class="col pl-0">
                                                     <p class="mb-0 text-danger">Выйти</p>
+                                                    <p class="small text-mute text-truncated">
+                                                        {% if user.email %}
+                                                        {{ user.email }}
+                                                        {% endif %}
+                                                    </p>
                                                 </div>
                                                 <div class="col-auto align-self-center text-right pl-0">
                                                     <i class="material-icons text-mute small text-danger">chevron_right</i>

@@ -12,7 +12,7 @@ DB_NAME = env.str("DB_NAME")
 DB_USER = env.str("DB_USER")
 DB_PASSWORD = env.str("DB_PASSWORD")
 DB_PORT = env.str("DB_PORT")
-POSTGRES_HOST = env.str("POSTGRES_HOST", "db")
+
 
 DEBUG = os.getenv("DEBUG", "1") == "1"
 BASE_URL = "https://lemana-pro.online"
@@ -20,6 +20,10 @@ ALLOWED_HOSTS = [os.getenv("HOST_NAME", "0.0.0.0"), f"www.{os.getenv('HOST_NAME'
 logger.debug(ALLOWED_HOSTS)
 if DEBUG:
     ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
+    POSTGRES_HOST = "localhost"
+else:
+    POSTGRES_HOST = env.str("POSTGRES_HOST", "db")
+
 CSRF_TRUSTED_ORIGINS = [
     f"https://*.{os.getenv('HOST_NAME')}",
     f"http://*.{os.getenv('HOST_NAME')}",
@@ -158,8 +162,13 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),  # Исходные файлы
 ]
 
-MEDIA_ROOT = "/app/media"
-MEDIA_URL = "/media/"
+# Для разработки
+if DEBUG:
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+else:
+    MEDIA_ROOT = "/app/media"
+    MEDIA_URL = "/media/"
 
 CACHES = {
     "default": {
