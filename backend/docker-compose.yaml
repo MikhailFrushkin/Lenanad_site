@@ -67,7 +67,7 @@ services:
     volumes:
       - certbot_data:/etc/letsencrypt
       - certbot_challenge:/var/www/certbot
-    command: certonly --webroot -w /var/www/certbot --force-renewal --email your-email@example.com -d lemana-pro.online -d www.lemana-pro.online --agree-tos
+    command: certonly --webroot -w /var/www/certbot --force-renewal --email muxazila@mail.ru -d lemana-pro.online -d www.lemana-pro.online --agree-tos
 
 volumes:
   postgres_data:
