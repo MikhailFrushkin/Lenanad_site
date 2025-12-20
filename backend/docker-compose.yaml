@@ -3,17 +3,23 @@ services:
     image: postgres:16-alpine
     container_name: django_db
     restart: unless-stopped
+    user: "999:999"  # Явно указываем пользователя (postgres обычно 999)
     environment:
       POSTGRES_DB: lemana_pro_online
       POSTGRES_USER: admin_user
       POSTGRES_PASSWORD: fma160392
+    ports:
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin_user -d lemana_pro_online"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U admin_user"]
+      interval: 30s  # Увеличиваем интервал
+      timeout: 10s
+      retries: 10
+    command: >
+      sh -c "chown -R 999:999 /var/lib/postgresql/data &&
+             exec docker-entrypoint.sh postgres"
 
   web:
     build: .
@@ -24,19 +30,20 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - ./data/staticfiles:/app/staticfiles
+      - ./data/media:/app/media
     environment:
-      DEBUG: "0"
-      SECRET_KEY: "gPm9rKjWtZfBvDqLxHsN3cR5yU7wA1eT4iM6o8pQ0sF2hJnCvXzYbGdEaBcDfG"
+      DEBUG: "1"  # Временно включаем DEBUG для отладки
+      SECRET_KEY: "temp-key-for-debug"
       DB_NAME: "lemana_pro_online"
       DB_USER: "admin_user"
       DB_PASSWORD: "fma160392"
       DB_HOST: "db"
       DB_PORT: "5432"
-      HOST_NAME: "lemana-pro.online"
+      HOST_NAME: "localhost"
     command: >
-      sh -c "sleep 5 &&
+      sh -c "echo 'Жду базу данных...' &&
+             sleep 10 &&
              python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
              exec gunicorn --bind 0.0.0.0:8000 --workers 3 backend.wsgi:application"
@@ -51,10 +58,5 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - static_volume:/static:ro
-      - media_volume:/media:ro
-
-volumes:
-  postgres_data:
-  static_volume:
-  media_volume:
+      - ./data/staticfiles:/static:ro
+      - ./data/media:/media:ro
