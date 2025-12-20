@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: admin_user
       POSTGRES_PASSWORD: fma160392
     volumes:
-      ./data/postgres:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin_user -d lemana_pro_online"]
       interval: 10s
