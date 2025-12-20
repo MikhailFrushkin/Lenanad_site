@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:16-alpine
@@ -8,12 +10,14 @@ services:
       POSTGRES_USER: admin_user
       POSTGRES_PASSWORD: fma160392
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin_user -d lemana_pro_online"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - django_network
 
   web:
     build: .
@@ -23,38 +27,50 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - .:/app
       - ./data/staticfiles:/app/staticfiles
       - ./data/media:/app/media
     environment:
       DEBUG: "0"
-      SECRET_KEY: "gPm9rKjWtZfBvDqLxHsN3cR5yU7wA1eT4iM6o8pQ0sF2hJnCvXzYbGdEaBcDfG"
+      SECRET_KEY: "gPm9rKjWtZfBvDqLxHsNcR5yU7wA1eT4iM6o8pQ0sF2hJnCvXzYbGdEaBcDfG"
       DB_NAME: "lemana_pro_online"
       DB_USER: "admin_user"
       DB_PASSWORD: "fma160392"
       DB_HOST: "db"
       DB_PORT: "5432"
-      HOST_NAME: "lemana-pro.online"
+      ALLOWED_HOSTS: "lemana-pro.online,www.lemana-pro.online,localhost,127.0.0.1"
     command: >
-      sh -c "sleep 5 &&
-             python manage.py migrate --noinput &&
+      sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
-             exec gunicorn --bind 0.0.0.0:8000 --workers 3 backend.wsgi:application"
+             python manage.py check --deploy &&
+             exec gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 backend.wsgi:application"
+    networks:
+      - django_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   nginx:
     image: nginx:alpine
     container_name: django_nginx
     restart: unless-stopped
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     ports:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - static_volume:/static:ro
-      - media_volume:/media:ro
+      - ./data/staticfiles:/static:ro
+      - ./data/media:/media:ro
+    networks:
+      - django_network
 
 volumes:
   postgres_data:
-  static_volume:
-  media_volume:
+    driver: local
+
+networks:
+  django_network:
+    driver: bridge
