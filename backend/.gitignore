@@ -182,3 +182,5 @@ data/
 !.gitkeep
 data/*/
 !data/*/.gitkeep
+/postgres_data/
+/backups/

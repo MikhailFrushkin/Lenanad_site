@@ -8,7 +8,10 @@ services:
       POSTGRES_USER: admin_user
       POSTGRES_PASSWORD: fma160392
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Изменяем: храним данные в директории хоста, а не в volume
+      - ./postgres_data:/var/lib/postgresql/data
+      # Бекапы тоже храним на хосте
+      - ./backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin_user -d lemana_pro_online"]
       interval: 10s
@@ -23,7 +26,6 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     environment:
@@ -36,8 +38,7 @@ services:
       DB_PORT: "5432"
       HOST_NAME: "lemana-pro.online"
     command: >
-      sh -c "sleep 5 &&
-             python manage.py migrate --noinput &&
+      sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
              exec gunicorn --bind 0.0.0.0:8000 --workers 3 backend.wsgi:application"
 
@@ -54,7 +55,7 @@ services:
       - static_volume:/static:ro
       - media_volume:/media:ro
 
+# Удаляем volume для базы данных, оставляем только для static/media
 volumes:
-  postgres_data:
   static_volume:
   media_volume:
