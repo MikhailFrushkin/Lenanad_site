@@ -55,23 +55,8 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro  # Для SSL сертификатов
       - static_volume:/static:ro
       - media_volume:/media:ro
-      - certbot_data:/etc/letsencrypt  # Volume для Certbot
-      - certbot_challenge:/var/www/certbot  # Для HTTP challenge
-
-  certbot:
-    image: certbot/certbot
-    container_name: django_certbot
-    restart: unless-stopped
-    depends_on:
-      - nginx
-    volumes:
-      - certbot_data:/etc/letsencrypt
-      - certbot_challenge:/var/www/certbot
-    command: certonly --webroot -w /var/www/certbot --force-renewal --email muxazila@mail.ru -d lemana-pro.online -d www.lemana-pro.online --agree-tos
 
 volumes:
   postgres_data:
   static_volume:
   media_volume:
-  certbot_data:
-  certbot_challenge:
