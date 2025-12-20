@@ -17,7 +17,6 @@ DB_PORT = env.str("DB_PORT")
 DEBUG = os.getenv("DEBUG", "1") == "1"
 BASE_URL = "https://lemana-pro.online"
 ALLOWED_HOSTS = [os.getenv("HOST_NAME", "0.0.0.0"), f"www.{os.getenv('HOST_NAME')}"]
-logger.debug(ALLOWED_HOSTS)
 if DEBUG:
     ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
     POSTGRES_HOST = "localhost"

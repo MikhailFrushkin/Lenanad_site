@@ -23,7 +23,11 @@
                                    role="button" data-toggle="dropdown" aria-haspopup="true"
                                    aria-expanded="false">
                                     <figure class="rounded avatar avatar-30">
+                                        {% if user.photo %}
                                         <img src="{{ user.photo.url }}" alt="">
+                                        {% else %}
+                                        <img src="{% static 'assets/img/user_test.png' %}" alt="">
+                                        {% endif %}
                                     </figure>
                                     <div class="username-text ml-2 mr-2 d-none d-lg-inline-block">
                                         <h6 class="username"><span>Привет,</span>{{ user.username|default:"User" }}
