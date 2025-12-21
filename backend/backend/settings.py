@@ -69,7 +69,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'home.middleware.VisitCounterMiddleware',
-    'home.middleware.Custom404Middleware',
+    'home.middleware.CustomErrorMiddleware',
 ]
 
 if not DEBUG:

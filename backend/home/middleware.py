@@ -1,11 +1,7 @@
-# middleware.py
-from django.http import HttpResponseNotFound
-from django.shortcuts import render
-from django.template import loader
-from django.utils import timezone
-from urllib.parse import urlparse, urlunparse, parse_qs
 import re
+from urllib.parse import urlparse, urlunparse
 
+from django.utils import timezone
 from loguru import logger
 
 
@@ -152,30 +148,49 @@ class VisitCounterMiddleware:
             logger.error(f"Error saving visit: {e}")
 
 
-class Custom404Middleware:
-    template_name_404 = 'errors/404.html'
-    template_name_403 = 'errors/403.html'
-    template_name_500 = 'errors/500.html'
+from django.shortcuts import render
+from django.core.exceptions import PermissionDenied
+from django.http import Http404
+
+
+class CustomErrorMiddleware:
+    """Middleware для обработки ошибок без перехвата нормальных ответов"""
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        response = self.get_response(request)
+        try:
+            response = self.get_response(request)
+        except Http404 as e:
+            # Обработка 404 ошибок
+            logger.warning(f"404 ошибка: {request.path} - {e}")
+            return render(request, 'errors/404.html', {
+                'request_path': request.path,
+                'exception': str(e)
+            }, status=404)
+        except PermissionDenied as e:
+            # Обработка 403 ошибок
+            logger.warning(f"403 ошибка: {request.path} - {e}")
+            return render(request, 'errors/403.html', {
+                'request_path': request.path,
+                'exception': str(e)
+            }, status=403)
+        except Exception as e:
+            # Обработка 500 ошибок
+            logger.error(f"500 ошибка: {request.path} - {e}", exc_info=True)
+            return render(request, 'errors/500.html', {
+                'request_path': request.path,
+                'exception': str(e)
+            }, status=500)
 
-        logger.debug(response.status_code)
-        if response.status_code == 404:
-            try:
-                return render(request, self.template_name_404)
-            except:
-                pass
-        elif response.status_code == 403:
-                try:
-                    return render(request, self.template_name_403)
-                except:
-                    pass
-        elif response.status_code == 500:
-                try:
-                    return render(request, self.template_name_500)
-                except:
-                    pass
+        # Если ответ уже имеет статус ошибки (например, от другого middleware)
+        if 400 <= response.status_code < 600:
+            if response.status_code == 404:
+                return render(request, 'errors/404.html', status=404)
+            elif response.status_code == 403:
+                return render(request, 'errors/403.html', status=403)
+            elif response.status_code == 500:
+                return render(request, 'errors/500.html', status=500)
+
         return response
