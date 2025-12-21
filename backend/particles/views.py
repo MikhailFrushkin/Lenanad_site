@@ -1,13 +1,17 @@
+from datetime import timedelta
+
+import pandas as pd
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponse
+from django.utils import timezone
+from django.views.generic import TemplateView
 from loguru import logger
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-
-import pandas as pd
-from django.http import HttpResponse
-
+from .models import PartiallyPickedAssembly
 from .serializers import (
     PartiallyPickedAssemblyCreateSerializer,
     PartiallyPickedAssemblySerializer
@@ -173,13 +177,6 @@ class ClearOldDataView(APIView):
             'deleted_count': deleted_count,
             'cutoff_date': cutoff_date
         })
-
-
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import TemplateView
-from django.utils import timezone
-from datetime import timedelta
-from .models import PartiallyPickedAssembly
 
 
 class ParticlesTable(LoginRequiredMixin, TemplateView):
