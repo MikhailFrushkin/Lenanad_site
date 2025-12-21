@@ -20,7 +20,7 @@ class City(models.Model):
         Country,
         on_delete=models.CASCADE,
         related_name="cities",
-        verbose_name="Страна"
+        verbose_name="город"
     )
 
     def __str__(self):
@@ -59,7 +59,7 @@ class Store(models.Model):
         City,
         on_delete=models.CASCADE,
         related_name="stores",
-        verbose_name="Город",
+        verbose_name="магазин",
         null=True,
         blank=True
     )
@@ -72,7 +72,7 @@ class Store(models.Model):
 
     def __str__(self):
         if self.city:
-            return f"{self.name} ({self.city.name})"
+            return f"{self.name}"
         return self.name
 
     class Meta:
@@ -89,20 +89,20 @@ class CustomUser(AbstractUser):
     ]
 
     country = models.ForeignKey(
-        Country,  # Исправлено: было Role, должно быть Country
+        Country,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="users_country",  # Уникальный related_name
+        related_name="users_country",
         verbose_name="Страна"
     )
 
     city = models.ForeignKey(
-        City,  # Исправлено: было Role, должно быть City
+        City,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="users_city",  # Уникальный related_name
+        related_name="users_city",
         verbose_name="Город"
     )
 
@@ -111,7 +111,7 @@ class CustomUser(AbstractUser):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="users_role",  # Уникальный related_name
+        related_name="users_role",
         verbose_name="Должность"
     )
 

@@ -68,13 +68,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'home.middleware.VisitCounterMiddleware',
-    'home.middleware.CustomErrorMiddleware',
+    'home.middleware.VisitCounterMiddleware'
 ]
 
 if not DEBUG:
     INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'debug_toolbar']
     MIDDLEWARE = [mw for mw in MIDDLEWARE if mw != 'debug_toolbar.middleware.DebugToolbarMiddleware']
+    MIDDLEWARE.append('home.middleware.CustomErrorMiddleware')
 else:
     # Для debug toolbar
     DEBUG_TOOLBAR_CONFIG = {
