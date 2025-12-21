@@ -1,7 +1,12 @@
 # middleware.py
+from django.http import HttpResponseNotFound
+from django.shortcuts import render
+from django.template import loader
 from django.utils import timezone
 from urllib.parse import urlparse, urlunparse, parse_qs
 import re
+
+from loguru import logger
 
 
 class VisitCounterMiddleware:
@@ -11,6 +16,8 @@ class VisitCounterMiddleware:
             '/admin/',
             '/static/',
             '/media/',
+            '/undefined/',
+            '/undefined',
             '/favicon.ico',
             '/robots.txt',
             '/sitemap.xml',
@@ -143,3 +150,32 @@ class VisitCounterMiddleware:
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error saving visit: {e}")
+
+
+class Custom404Middleware:
+    template_name_404 = 'errors/404.html'
+    template_name_403 = 'errors/403.html'
+    template_name_500 = 'errors/500.html'
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        logger.debug(response.status_code)
+        if response.status_code == 404:
+            try:
+                return render(request, self.template_name_404)
+            except:
+                pass
+        elif response.status_code == 403:
+                try:
+                    return render(request, self.template_name_403)
+                except:
+                    pass
+        elif response.status_code == 500:
+                try:
+                    return render(request, self.template_name_500)
+                except:
+                    pass
+        return response
