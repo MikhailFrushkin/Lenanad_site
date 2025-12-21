@@ -119,7 +119,6 @@ function exportTableToExcel(event) {
                         <th class="min-desktop">Название товара</th>
                         <th class="min-desktop">Изображение</th>
                         <th class="min-desktop">Не хватает</th>
-                        <th class="min-desktop">Статус</th>
                         <th class="min-desktop">Действия</th>
                     </tr>
                 </thead>
@@ -242,22 +241,6 @@ function exportTableToExcel(event) {
                                 </div>
                             {% endif %}
                         </td>
-
-                        <!-- Статус сборки -->
-                        <td>
-                            {% if row.is_first_product %}
-                                {% if row.assembly.status_str == 'PARTIALLY_PICKED' %}
-                                    <span class="badge badge-warning">Частично собрано</span>
-                                {% elif row.assembly.status_str == 'PICKED' %}
-                                    <span class="badge badge-success">Собрано</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">{{ row.assembly.status_str }}</span>
-                                {% endif %}
-                                <br>
-                                <small>Товаров: {{ row.assembly.products_count }}</small>
-                            {% endif %}
-                        </td>
-
                         <!-- Действия -->
                         <td>
                             {% if row.is_first_product %}

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from pprint import pprint
 
 import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -14,7 +14,6 @@ from rest_framework.views import APIView
 from .models import PartiallyPickedAssembly, PartiallyPickedProduct
 from .serializers import (
     PartiallyPickedAssemblyCreateSerializer,
-    PartiallyPickedAssemblySerializer
 )
 
 
@@ -85,100 +84,6 @@ class ReceivePartiallyPickedAssembliesView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PartiallyPickedAssembliesListView(APIView):
-    """
-    Получение списка частично собранных сборок
-    """
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        queryset = PartiallyPickedAssembly.objects.all()
-
-        # Применяем фильтры
-        assembler = request.query_params.get('assembler')
-        if assembler:
-            queryset = queryset.filter(assembler__icontains=assembler)
-
-        order = request.query_params.get('order')
-        if order:
-            queryset = queryset.filter(order_number=order)
-
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        if date_from:
-            queryset = queryset.filter(timestamp__date__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(timestamp__date__lte=date_to)
-
-        # Лимит
-        limit = int(request.query_params.get('limit', 100))
-        queryset = queryset[:limit]
-
-        serializer = PartiallyPickedAssemblySerializer(queryset, many=True)
-
-        return Response({
-            'status': 'success',
-            'count': len(serializer.data),
-            'results': serializer.data
-        })
-
-
-class TodayStatsView(APIView):
-    """
-    Статистика за сегодня
-    """
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        today = timezone.now().date()
-
-        queryset = PartiallyPickedAssembly.objects.filter(
-            timestamp__date=today
-        )
-
-        total_assemblies = queryset.count()
-        total_products = sum(assembly.products_count for assembly in queryset)
-        total_missing = sum(assembly.total_missing_quantity for assembly in queryset)
-
-        # Список сборщиков за сегодня
-        assemblers = queryset.values('assembler').distinct()
-
-        return Response({
-            'date': today,
-            'total_assemblies': total_assemblies,
-            'total_products': total_products,
-            'total_missing_quantity': total_missing,
-            'unique_assemblers': assemblers.count(),
-            'assemblers': [a['assembler'] for a in assemblers if a['assembler']]
-        })
-
-
-class ClearOldDataView(APIView):
-    """
-    Очистка старых данных (старше N дней)
-    """
-    permission_classes = [AllowAny]
-
-    def delete(self, request):
-        """
-        Удалить данные старше N дней
-        Параметр: days=30 (по умолчанию)
-        """
-        days = int(request.query_params.get('days', 30))
-        cutoff_date = timezone.now() - timedelta(days=days)
-
-        deleted_count, _ = PartiallyPickedAssembly.objects.filter(
-            created_at__lt=cutoff_date
-        ).delete()
-
-        return Response({
-            'status': 'success',
-            'message': f'Удалено {deleted_count} записей старше {days} дней',
-            'deleted_count': deleted_count,
-            'cutoff_date': cutoff_date
-        })
-
-
 class ParticlesTable(LoginRequiredMixin, TemplateView):
     template_name = "particles.html"
     login_url = "home:login"
@@ -220,7 +125,7 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
 
         # Создаем плоский список для таблицы
         table_data = []
-        for assembly in assemblies.order_by("-created_at"):
+        for assembly in assemblies.order_by("-created_at", "order_number", "task_id"):
             products = assembly.products.all()
 
             # Если есть фильтр по отделу - фильтруем продукты тоже
@@ -233,26 +138,16 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
                     table_data.append({
                         'assembly': assembly,
                         'product': product,
-                        'is_first_product': False,
+                        'is_first_product': True,
                     })
             else:
                 # Если нет товаров - все равно показываем сборку
-                # Но только если нет фильтра по отделу
                 if not department_id:
                     table_data.append({
                         'assembly': assembly,
                         'product': None,
                         'is_first_product': True,
                     })
-
-        # Отмечаем первую строку для каждой сборки (для группировки)
-        current_assembly_id = None
-        for i, row in enumerate(table_data):
-            if row['assembly'].id != current_assembly_id:
-                row['is_first_product'] = True
-                current_assembly_id = row['assembly'].id
-            else:
-                row['is_first_product'] = False
 
         context['table_data'] = table_data
         context['total_rows'] = len(table_data)
@@ -271,12 +166,11 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         context['filter_date_from'] = date_from
         context['filter_date_to'] = date_to
         context['filter_department'] = department_id
-        context['filter_zone'] = assembly_zone  # НОВЫЙ КОНТЕКСТ
+        context['filter_zone'] = assembly_zone
 
         return context
 
 
-# Дополнительная вью для детального просмотра сборки
 class AssemblyDetailView(LoginRequiredMixin, TemplateView):
     template_name = "assembly_detail.html"
     login_url = "home:login"

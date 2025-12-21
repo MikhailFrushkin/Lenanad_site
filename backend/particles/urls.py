@@ -13,13 +13,4 @@ urlpatterns = [
          views.ReceivePartiallyPickedAssembliesView.as_view(),
          name='receive-partially-picked'),
 
-    # Получение данных
-    path('partially_picked_list/',
-         views.PartiallyPickedAssembliesListView.as_view(),
-         name='list-partially-picked'),
-
-    # Статистика
-    path('today_stats/',
-         views.TodayStatsView.as_view(),
-         name='today-stats'),
 ]

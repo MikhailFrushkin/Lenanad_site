@@ -4,6 +4,27 @@
 {% block title %}Детали сборки {{ assembly.order_number }}{% endblock %}
 
 {% block content %}
+<style>
+/* Разрешить выделение текста во всей таблице */
+#assembliesTable {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+}
+
+/* Разрешить выделение во всех ячейках */
+#assembliesTable td,
+#assembliesTable th {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
+/* Убедитесь, что нет классов, блокирующих выделение */
+.table-responsive {
+    user-select: text !important;
+}
+</style>
 <div class="container-fluid">
     <!-- Заголовок -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -107,18 +128,14 @@
                                         <th>Требуется</th>
                                         <th>Собрано</th>
                                         <th>Не хватает</th>
-                                        <th>Статус</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for product in products %}
-                                    <tr class="{% if product.is_critical %}table-danger{% endif %}">
+                                    <tr>
                                         <td><code>{{ product.lm_code }}</code></td>
                                         <td>
-                                            <span class="badge 
-                                                {% if product.department_id == '6' %}badge-danger
-                                                {% elif product.department_id == '9' %}badge-warning
-                                                {% else %}badge-info{% endif %}">
+                                            <span>
                                                 {{ product.department_id|default:"-" }}
                                             </span>
                                         </td>
@@ -149,15 +166,6 @@
                                                 </span>
                                             {% else %}
                                                 <span class="badge badge-success badge-pill">0</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if product.is_critical %}
-                                                <span class="badge badge-danger">Критично</span>
-                                            {% elif product.missing_quantity > 0 %}
-                                                <span class="badge badge-warning">В работе</span>
-                                            {% else %}
-                                                <span class="badge badge-success">Готово</span>
                                             {% endif %}
                                         </td>
                                     </tr>
