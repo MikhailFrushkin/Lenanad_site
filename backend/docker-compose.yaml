@@ -8,9 +8,7 @@ services:
       POSTGRES_USER: admin_user
       POSTGRES_PASSWORD: fma160392
     volumes:
-      # Изменяем: храним данные в директории хоста, а не в volume
       - ./postgres_data:/var/lib/postgresql/data
-      # Бекапы тоже храним на хосте
       - ./backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin_user -d lemana_pro_online"]
@@ -37,6 +35,9 @@ services:
       DB_HOST: "db"
       DB_PORT: "5432"
       HOST_NAME: "lemana-pro.online"
+      # Добавляем переменную для HTTPS
+      SECURE_SSL_REDIRECT: "True"
+      SECURE_PROXY_SSL_HEADER: "HTTP_X_FORWARDED_PROTO,https"
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
@@ -49,13 +50,18 @@ services:
     depends_on:
       - web
     ports:
+      # Открываем порты 80 и 443
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Используем SSL конфиг
+      - ./nginx/nginx-ssl.conf:/etc/nginx/nginx.conf:ro
       - static_volume:/static:ro
       - media_volume:/media:ro
+      # Монтируем сертификаты
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /root/mycego_sites/cert_folder:/etc/certs:ro
 
-# Удаляем volume для базы данных, оставляем только для static/media
 volumes:
   static_volume:
   media_volume:
