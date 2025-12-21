@@ -221,7 +221,7 @@ function exportTableToExcel(event) {
                         </td>
 
                         <!-- Недостающее количество -->
-                        <td>
+                        <td class="text-center">
                             {% if row.product %}
                                 <div class="d-flex align-items-center">
                                     {% if row.product.missing_quantity > 5 %}
