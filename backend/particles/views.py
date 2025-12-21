@@ -11,7 +11,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import PartiallyPickedAssembly
+from .models import PartiallyPickedAssembly, PartiallyPickedProduct
 from .serializers import (
     PartiallyPickedAssemblyCreateSerializer,
     PartiallyPickedAssemblySerializer
@@ -192,6 +192,7 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         order_number = self.request.GET.get('order_number')
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
+        department_id = self.request.GET.get('department_id')  # НОВЫЙ ПАРАМЕТР
 
         # Получаем сборки с связанными товарами (optimized query)
         assemblies = PartiallyPickedAssembly.objects.prefetch_related('products').all()
@@ -209,26 +210,36 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         if date_to:
             assemblies = assemblies.filter(timestamp__date__lte=date_to)
 
+        # НОВЫЙ ФИЛЬТР: по отделу продуктов
+        if department_id:
+            assemblies = assemblies.filter(products__department_id=department_id).distinct()
+
         # Создаем плоский список для таблицы
         table_data = []
         for assembly in assemblies.order_by("-created_at"):
             products = assembly.products.all()
 
-            if products:
+            # Если есть фильтр по отделу - фильтруем продукты тоже
+            if department_id:
+                products = products.filter(department_id=department_id)
+
+            if products.exists():
                 # Если есть товары - создаем строку для каждого
                 for product in products:
                     table_data.append({
                         'assembly': assembly,
                         'product': product,
-                        'is_first_product': False,  # Будет установлено позже
+                        'is_first_product': False,
                     })
             else:
                 # Если нет товаров - все равно показываем сборку
-                table_data.append({
-                    'assembly': assembly,
-                    'product': None,
-                    'is_first_product': True,
-                })
+                # Но только если нет фильтра по отделу
+                if not department_id:
+                    table_data.append({
+                        'assembly': assembly,
+                        'product': None,
+                        'is_first_product': True,
+                    })
 
         # Отмечаем первую строку для каждой сборки (для группировки)
         current_assembly_id = None
@@ -246,12 +257,17 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         # Статистика для фильтров
         context['unique_assemblers'] = assemblies.values('assembler').distinct()
         context['unique_zones'] = assemblies.values('assembly_zone').distinct()
+        # НОВЫЙ КОНТЕКСТ: уникальные отделы
+        context['unique_departments'] = PartiallyPickedProduct.objects.values('department_id').exclude(
+            department_id__isnull=True
+        ).exclude(department_id='').distinct().order_by('department_id')
 
         # Параметры фильтров для отображения
         context['filter_assembler'] = assembler
         context['filter_order'] = order_number
         context['filter_date_from'] = date_from
         context['filter_date_to'] = date_to
+        context['filter_department'] = department_id  # НОВЫЙ КОНТЕКСТ
 
         return context
 

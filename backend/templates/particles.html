@@ -83,6 +83,7 @@ function exportTableToExcel(event) {
                         Фильтр применен:
                         {% if filter_assembler %}Сборщик: {{ filter_assembler }}{% endif %}
                         {% if filter_order %} | Заказ: {{ filter_order }}{% endif %}
+                        {% if filter_department %} | Отдел: {{ filter_department }}{% endif %}
                         {% if filter_date_from %} | С {{ filter_date_from }}{% endif %}
                         {% if filter_date_to %} по {{ filter_date_to }}{% endif %}
                     {% else %}
@@ -324,6 +325,18 @@ function exportTableToExcel(event) {
                                 <option value="{{ assembler.assembler }}"
                                         {% if filter_assembler == assembler.assembler %}selected{% endif %}>
                                     {{ assembler.assembler|default:"Не указан" }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="department_id">Отдел товара</label>
+                        <select class="form-control" id="department_id" name="department_id">
+                            <option value="">Все отделы</option>
+                            {% for dept in unique_departments %}
+                                <option value="{{ dept.department_id }}"
+                                        {% if filter_department == dept.department_id %}selected{% endif %}>
+                                    Отдел {{ dept.department_id }}
                                 </option>
                             {% endfor %}
                         </select>
