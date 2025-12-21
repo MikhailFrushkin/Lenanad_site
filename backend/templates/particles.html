@@ -302,9 +302,9 @@ function exportTableToExcel(event) {
                         <select class="form-control" id="assembler" name="assembler">
                             <option value="">Все сборщики</option>
                             {% for assembler in unique_assemblers %}
-                                <option value="{{ assembler.assembler }}"
-                                        {% if filter_assembler == assembler.assembler %}selected{% endif %}>
-                                    {{ assembler.assembler|default:"Не указан" }}
+                                <option value="{{ assembler }}"
+                                        {% if filter_assembler == assembler %}selected{% endif %}>
+                                    {{ assembler|default:"Не указан" }}
                                 </option>
                             {% endfor %}
                         </select>

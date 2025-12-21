@@ -98,9 +98,9 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
         department_id = self.request.GET.get('department_id')
-        assembly_zone = self.request.GET.get('assembly_zone')  # НОВЫЙ ПАРАМЕТР: зона сборки
+        assembly_zone = self.request.GET.get('assembly_zone')
 
-        # Получаем сборки с связанными товарами (optimized query)
+        # Базовый QuerySet с префетчем
         assemblies = PartiallyPickedAssembly.objects.prefetch_related('products').all()
 
         # Применяем фильтры
@@ -119,7 +119,6 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         if department_id:
             assemblies = assemblies.filter(products__department_id=department_id).distinct()
 
-        # НОВЫЙ ФИЛЬТР: по зоне сборки
         if assembly_zone:
             assemblies = assemblies.filter(assembly_zone__icontains=assembly_zone)
 
@@ -128,12 +127,10 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         for assembly in assemblies.order_by("-created_at", "order_number", "task_id"):
             products = assembly.products.all()
 
-            # Если есть фильтр по отделу - фильтруем продукты тоже
             if department_id:
                 products = products.filter(department_id=department_id)
 
             if products.exists():
-                # Если есть товары - создаем строку для каждого
                 for product in products:
                     table_data.append({
                         'assembly': assembly,
@@ -141,7 +138,6 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
                         'is_first_product': True,
                     })
             else:
-                # Если нет товаров - все равно показываем сборку
                 if not department_id:
                     table_data.append({
                         'assembly': assembly,
@@ -153,14 +149,15 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         context['total_rows'] = len(table_data)
         context['total_assemblies'] = assemblies.count()
 
-        # Статистика для фильтров
-        context['unique_assemblers'] = assemblies.values('assembler').distinct()
+        context['unique_assemblers'] = list(set(i.get("assembler") for i in assemblies.values('assembler')))
+        pprint(context['unique_assemblers'] )
+        # Для зон и отделов тоже добавляем distinct() и order_by()
         context['unique_zones'] = assemblies.values('assembly_zone').distinct().order_by('assembly_zone')
         context['unique_departments'] = PartiallyPickedProduct.objects.values('department_id').exclude(
             department_id__isnull=True
         ).exclude(department_id='').distinct().order_by('department_id')
 
-        # Параметры фильтров для отображения
+        # Параметры фильтров
         context['filter_assembler'] = assembler
         context['filter_order'] = order_number
         context['filter_date_from'] = date_from
