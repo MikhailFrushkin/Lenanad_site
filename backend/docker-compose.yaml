@@ -35,7 +35,7 @@ services:
       DB_HOST: "db"
       DB_PORT: "5432"
       HOST_NAME: "lemana-pro.online"
-      # Добавляем переменную для HTTPS
+      # Добавляем переменные для HTTPS
       SECURE_SSL_REDIRECT: "True"
       SECURE_PROXY_SSL_HEADER: "HTTP_X_FORWARDED_PROTO,https"
     command: >
@@ -58,9 +58,8 @@ services:
       - ./nginx/nginx-ssl.conf:/etc/nginx/nginx.conf:ro
       - static_volume:/static:ro
       - media_volume:/media:ro
-      # Монтируем сертификаты
+      # Монтируем сертификаты Let's Encrypt
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /root/mycego_sites/cert_folder:/etc/certs:ro
 
 volumes:
   static_volume:
