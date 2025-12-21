@@ -192,7 +192,8 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         order_number = self.request.GET.get('order_number')
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
-        department_id = self.request.GET.get('department_id')  # НОВЫЙ ПАРАМЕТР
+        department_id = self.request.GET.get('department_id')
+        assembly_zone = self.request.GET.get('assembly_zone')  # НОВЫЙ ПАРАМЕТР: зона сборки
 
         # Получаем сборки с связанными товарами (optimized query)
         assemblies = PartiallyPickedAssembly.objects.prefetch_related('products').all()
@@ -210,9 +211,12 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         if date_to:
             assemblies = assemblies.filter(timestamp__date__lte=date_to)
 
-        # НОВЫЙ ФИЛЬТР: по отделу продуктов
         if department_id:
             assemblies = assemblies.filter(products__department_id=department_id).distinct()
+
+        # НОВЫЙ ФИЛЬТР: по зоне сборки
+        if assembly_zone:
+            assemblies = assemblies.filter(assembly_zone__icontains=assembly_zone)
 
         # Создаем плоский список для таблицы
         table_data = []
@@ -256,8 +260,7 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
 
         # Статистика для фильтров
         context['unique_assemblers'] = assemblies.values('assembler').distinct()
-        context['unique_zones'] = assemblies.values('assembly_zone').distinct()
-        # НОВЫЙ КОНТЕКСТ: уникальные отделы
+        context['unique_zones'] = assemblies.values('assembly_zone').distinct().order_by('assembly_zone')
         context['unique_departments'] = PartiallyPickedProduct.objects.values('department_id').exclude(
             department_id__isnull=True
         ).exclude(department_id='').distinct().order_by('department_id')
@@ -267,7 +270,8 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         context['filter_order'] = order_number
         context['filter_date_from'] = date_from
         context['filter_date_to'] = date_to
-        context['filter_department'] = department_id  # НОВЫЙ КОНТЕКСТ
+        context['filter_department'] = department_id
+        context['filter_zone'] = assembly_zone  # НОВЫЙ КОНТЕКСТ
 
         return context
 

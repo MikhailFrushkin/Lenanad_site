@@ -32,7 +32,7 @@ function exportTableToExcel(event) {
     let exportUrl = "{% url 'particles:export_assemblies' %}";
 
     // Копируем текущие GET-параметры для фильтров
-    const filters = ['assembler', 'order_number', 'date_from', 'date_to'];
+    const filters = ['assembler', 'order_number', 'date_from', 'date_to', 'department_id', 'assembly_zone'];
     let hasParams = false;
 
     filters.forEach(filter => {
@@ -79,10 +79,11 @@ function exportTableToExcel(event) {
             <div class="col-12 col-md">
                 <h4 class="mb-0">Частично собранные сборки</h4>
                 <p class="text-muted mb-0">
-                    {% if filter_assembler or filter_order or filter_date_from %}
+                    {% if filter_assembler or filter_order or filter_date_from or filter_department or filter_zone %}
                         Фильтр применен:
                         {% if filter_assembler %}Сборщик: {{ filter_assembler }}{% endif %}
                         {% if filter_order %} | Заказ: {{ filter_order }}{% endif %}
+                        {% if filter_zone %} | Зона: {{ filter_zone }}{% endif %}
                         {% if filter_department %} | Отдел: {{ filter_department }}{% endif %}
                         {% if filter_date_from %} | С {{ filter_date_from }}{% endif %}
                         {% if filter_date_to %} по {{ filter_date_to }}{% endif %}
@@ -329,6 +330,19 @@ function exportTableToExcel(event) {
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="assembly_zone">Зона сборки</label>
+                        <select class="form-control" id="assembly_zone" name="assembly_zone">
+                            <option value="">Все зоны</option>
+                            {% for zone in unique_zones %}
+                                <option value="{{ zone.assembly_zone }}"
+                                        {% if filter_zone == zone.assembly_zone %}selected{% endif %}>
+                                    {{ zone.assembly_zone|default:"Не указана" }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label for="department_id">Отдел товара</label>
                         <select class="form-control" id="department_id" name="department_id">
