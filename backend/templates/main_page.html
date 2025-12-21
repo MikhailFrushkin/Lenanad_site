@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load cache %}
 {% block content %}
+{% cache 600 main_page_content %}
 <div class="container-fluid main-container container" id="main-container">
     <div class="row">
         <div class="container mt-4 text-center pb-5">
@@ -160,5 +162,5 @@
 
     </div>
 </div>
-
+{% endcache %}
 {% endblock %}
