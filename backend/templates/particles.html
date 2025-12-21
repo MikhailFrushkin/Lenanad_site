@@ -23,6 +23,7 @@
 .table-responsive {
     user-select: text !important;
 }
+    .text-center {font-size:1.2rem;}
 </style>
 
 <script>
@@ -179,7 +180,7 @@ function exportTableToExcel(event) {
                         </td>
 
                         <!-- LM код товара -->
-                        <td>
+                        <td class="text-center">
                             {% if row.product %}
                                 <code style="font-size:100%;">{{ row.product.lm_code }}</code>
                             {% else %}
