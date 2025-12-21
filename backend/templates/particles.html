@@ -189,14 +189,9 @@ function exportTableToExcel(event) {
                         </td>
 
                         <!-- Отдел -->
-                        <td>
+                        <td class="text-center">
                             {% if row.product %}
-                                <span class="badge
-                                    {% if row.product.department_id == '6' %}badge-danger
-                                    {% elif row.product.department_id == '9' %}badge-warning
-                                    {% else %}badge-info{% endif %}">
-                                    {{ row.product.department_id|default:"-" }}
-                                </span>
+                                <span class="badge badge-secondary">{{ row.product.department_id|default:"-" }}</span>
                             {% endif %}
                         </td>
 
