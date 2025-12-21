@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Частично собранные сборки{% endblock %}
+{% block content %}
+<style>
+/* Разрешить выделение текста во всей таблице */
+#assembliesTable {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+}
+
+/* Разрешить выделение во всех ячейках */
+#assembliesTable td,
+#assembliesTable th {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
+/* Убедитесь, что нет классов, блокирующих выделение */
+.table-responsive {
+    user-select: text !important;
+}
+</style>
+
+<script>
+function exportTableToExcel(event) {
+    // Собираем текущие параметры фильтров
+    const urlParams = new URLSearchParams(window.location.search);
+    let exportUrl = "{% url 'particles:export_assemblies' %}";
+
+    // Копируем текущие GET-параметры для фильтров
+    const filters = ['assembler', 'order_number', 'date_from', 'date_to'];
+    let hasParams = false;
+
+    filters.forEach(filter => {
+        const value = urlParams.get(filter);
+        if (value) {
+            exportUrl += (hasParams ? '&' : '?') + filter + '=' + encodeURIComponent(value);
+            hasParams = true;
+        }
+    });
+
+    // Сохраняем ссылку на кнопку
+    const exportBtn = event.target.closest('button') || event.target;
+    const originalHtml = exportBtn.innerHTML;
+
+    // Показываем индикатор загрузки
+    exportBtn.innerHTML = '<i class="material-icons md-18">hourglass_empty</i> Экспорт...';
+    exportBtn.disabled = true;
+
+    // Создаем скрытую ссылку для скачивания
+    const downloadLink = document.createElement('a');
+    downloadLink.href = exportUrl;
+    downloadLink.target = '_blank';
+    downloadLink.style.display = 'none';
+    downloadLink.download = 'assemblies_export.xlsx'; // Укажите имя файла
+
+    // Добавляем на страницу и кликаем
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+
+    // Удаляем ссылку
+    document.body.removeChild(downloadLink);
+
+    // Восстанавливаем кнопку через короткую задержку
+    // (предполагаем, что файл начнет скачиваться сразу)
+    setTimeout(() => {
+        exportBtn.innerHTML = originalHtml;
+        exportBtn.disabled = false;
+    }, 1500); // 1.5 секунды достаточно для начала скачивания
+}
+</script>
+<div class="card border-0 shadow-sm" style="width: 100% !important;margin:10px;">
+    <div class="card-header border-0 bg-none">
+        <div class="row align-items-center">
+            <div class="col-12 col-md">
+                <h4 class="mb-0">Частично собранные сборки</h4>
+                <p class="text-muted mb-0">
+                    {% if filter_assembler or filter_order or filter_date_from %}
+                        Фильтр применен:
+                        {% if filter_assembler %}Сборщик: {{ filter_assembler }}{% endif %}
+                        {% if filter_order %} | Заказ: {{ filter_order }}{% endif %}
+                        {% if filter_date_from %} | С {{ filter_date_from }}{% endif %}
+                        {% if filter_date_to %} по {{ filter_date_to }}{% endif %}
+                    {% else %}
+                        Все записи
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-auto align-self-center">
+                <button class="btn btn-sm btn-outline-template ml-2" onclick="exportTableToExcel(event)">
+                    <i class="material-icons md-18">cloud_download</i> Экспорт в Excel
+                </button>
+                <button class="btn btn-sm btn-outline-template ml-2" data-toggle="modal" data-target="#filterModal">
+                    <i class="material-icons md-18">filter_list</i> Фильтры
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица -->
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table display responsive" id="assembliesTable" style="width: 100% !important;">
+                <thead>
+                    <tr>
+                        <th class="min-tablet">№</th>
+                        <th class="min-tablet">Номер заказа</th>
+                        <th class="min-tablet">Зона сборки</th>
+                        <th class="min-tablet">Сборщик</th>
+                        <th class="min-desktop">Дата создания</th>
+                        <th class="min-desktop">LM код</th>
+                        <th class="min-desktop">Отдел</th>
+                        <th class="min-desktop">Название товара</th>
+                        <th class="min-desktop">Изображение</th>
+                        <th class="min-desktop">Не хватает</th>
+                        <th class="min-desktop">Статус</th>
+                        <th class="min-desktop">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table_data %}
+                    <tr class="{% if row.is_first_product %}table-active{% endif %}">
+                        <!-- Номер заказа -->
+                        <td class="text-center">
+                            <strong>{{ forloop.counter }}</strong>
+                        </td>
+
+                        <td>
+                            {% if row.is_first_product %}
+                                <a href="https://magportal.lemanapro.ru/orders/orders_v2/{{row.assembly.order_number}}" target="_blank"><strong>{{ row.assembly.order_number }}</strong></a>
+                                <br>
+                                <small class="text-muted">ID: {{ row.assembly.task_id }}</small>
+                            {% endif %}
+                        </td>
+
+                        <!-- Зона сборки -->
+                        <td class="text-center">
+                            {% if row.is_first_product %}
+                                <span class="badge badge-secondary">{{ row.assembly.assembly_zone|default:"-" }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Сборщик -->
+                        <td>
+                            {% if row.is_first_product %}
+                                {% if row.assembly.assembler %}
+                                    <div class="media">
+                                        <figure class="mb-0 avatar avatar-40 mr-2">
+                                            {% if row.assembly.assembler %}
+                                                {{ row.assembly.assembler|make_list|first }}
+                                            {% else %}
+                                                <i class="material-icons">person</i>
+                                            {% endif %}
+                                        </figure>
+                                        <div class="media-body">
+                                            <p class="mb-0 template-inverse">
+                                                {{ row.assembly.assembler }}
+                                            </p>
+                                            <small class="text-template-primary-light">
+                                                {{ row.assembly.timestamp|date:"d.m.Y H:i" }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Не указан</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+
+                        <!-- Дата создания -->
+                        <td>
+                            {% if row.is_first_product %}
+                                {{ row.assembly.created_at|date:"d.m.Y" }}
+                                <br>
+                                <small>{{ row.assembly.created_at|date:"H:i" }}</small>
+                            {% endif %}
+                        </td>
+
+                        <!-- LM код товара -->
+                        <td>
+                            {% if row.product %}
+                                <code style="font-size:100%;">{{ row.product.lm_code }}</code>
+                            {% else %}
+                                <span class="text-muted">Нет товаров</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Отдел -->
+                        <td>
+                            {% if row.product %}
+                                <span class="badge
+                                    {% if row.product.department_id == '6' %}badge-danger
+                                    {% elif row.product.department_id == '9' %}badge-warning
+                                    {% else %}badge-info{% endif %}">
+                                    {{ row.product.department_id|default:"-" }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Название товара -->
+                        <td>
+                            {% if row.product %}
+                                <div class="text-truncate" style="max-width: 200px;"
+                                     title="{{ row.product.title|default:'Без названия' }}">
+                                    {{ row.product.title|default:"Без названия"|truncatechars:50 }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Изображение -->
+                        <td>
+                            {% if row.product and row.product.image_url %}
+                                <a href="{{ row.product.image_url }}" target="_blank"
+                                   data-toggle="tooltip" title="Посмотреть изображение">
+                                    <img src="{{ row.product.image_url }}"
+                                         class="img-thumbnail"
+                                         style="width: 50px; height: 50px; object-fit: cover;"
+                                         onerror="this.src='{% static 'img/no-image.png' %}'">
+                                </a>
+                            {% elif row.product %}
+                                <span class="text-muted">Нет изображения</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Недостающее количество -->
+                        <td>
+                            {% if row.product %}
+                                <div class="d-flex align-items-center">
+                                    {% if row.product.missing_quantity > 5 %}
+                                        <span class="badge badge-danger badge-pill mr-2">
+                                            {{ row.product.missing_quantity }}
+                                        </span>
+                                        <small class="text-danger">Критично</small>
+                                    {% elif row.product.missing_quantity > 0 %}
+                                        <span class="badge badge-warning badge-pill mr-2">
+                                            {{ row.product.missing_quantity }}
+                                        </span>
+                                        <small></small>
+                                    {% else %}
+                                        <span class="badge badge-success badge-pill">
+                                            0
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Статус сборки -->
+                        <td>
+                            {% if row.is_first_product %}
+                                {% if row.assembly.status_str == 'PARTIALLY_PICKED' %}
+                                    <span class="badge badge-warning">Частично собрано</span>
+                                {% elif row.assembly.status_str == 'PICKED' %}
+                                    <span class="badge badge-success">Собрано</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ row.assembly.status_str }}</span>
+                                {% endif %}
+                                <br>
+                                <small>Товаров: {{ row.assembly.products_count }}</small>
+                            {% endif %}
+                        </td>
+
+                        <!-- Действия -->
+                        <td>
+                            {% if row.is_first_product %}
+                                <div class="dropdown">
+                                    <button class="btn dropdown-toggle btn-sm btn-link" type="button"
+                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="material-icons">more_horiz</i>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-sm dropdown-menu-right">
+                                        <a class="dropdown-item"
+                                           href="{% url 'particles:assembly_detail' row.assembly.id %}">
+                                            <i class="material-icons md-18">visibility</i> Подробнее
+                                        </a>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="material-icons md-18">edit</i> Редактировать
+                                        </a>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="material-icons md-18">print</i> Печать
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger" href="#">
+                                            <i class="material-icons md-18">delete</i> Удалить
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="text-center py-4">
+                            <i class="material-icons md-48 text-muted">inbox</i>
+                            <h5 class="mt-2">Нет данных</h5>
+                            <p class="text-muted">Не найдено частично собранных сборок</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно фильтров -->
+<div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="get" action="">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterModalLabel">Фильтры</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="assembler">Сборщик</label>
+                        <select class="form-control" id="assembler" name="assembler">
+                            <option value="">Все сборщики</option>
+                            {% for assembler in unique_assemblers %}
+                                <option value="{{ assembler.assembler }}"
+                                        {% if filter_assembler == assembler.assembler %}selected{% endif %}>
+                                    {{ assembler.assembler|default:"Не указан" }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="order_number">Номер заказа</label>
+                        <input type="text" class="form-control" id="order_number" name="order_number"
+                               value="{{ filter_order|default:'' }}" placeholder="Введите номер заказа">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="date_from">Дата с</label>
+                                <input type="date" class="form-control" id="date_from" name="date_from"
+                                       value="{{ filter_date_from|default:'' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="date_to">Дата по</label>
+                                <input type="date" class="form-control" id="date_to" name="date_to"
+                                       value="{{ filter_date_to|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'particles:particles_main' %}" class="btn btn-secondary">
+                        Сбросить фильтры
+                    </a>
+                    <button type="submit" class="btn btn-template">
+                        Применить фильтры
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Инициализация DataTables
+    $(document).ready(function() {
+        $('#assembliesTable').DataTable({
+            "responsive": true,
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Russian.json"
+            },
+            "pageLength": 50,
+        });
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+</script>
+
+{% endblock %}

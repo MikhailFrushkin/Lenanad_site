@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # Ваши приложения
     'home',
     'users',
+    'particles',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Детали сборки {{ assembly.order_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">Сборка {{ assembly.order_number }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'particles:particles_main' %}">Частично собранные сборки</a></li>
+                    <li class="breadcrumb-item active">Детали сборки</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'particles:particles_main' %}" class="btn btn-outline-secondary">
+                <i class="material-icons md-18">arrow_back</i> Назад
+            </a>
+        </div>
+    </div>
+    
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% else %}
+        <!-- Карточка сборки -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Информация о сборке</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Номер заказа:</th>
+                                        <td><strong>{{ assembly.order_number }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <th>ID сборки:</th>
+                                        <td><code>{{ assembly.task_id }}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Зона сборки:</th>
+                                        <td>
+                                            <span class="badge badge-secondary">{{ assembly.assembly_zone|default:"-" }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Статус:</th>
+                                        <td>
+                                            {% if assembly.status_str == 'PARTIALLY_PICKED' %}
+                                                <span class="badge badge-warning">Частично собрано</span>
+                                            {% elif assembly.status_str == 'PICKED' %}
+                                                <span class="badge badge-success">Собрано</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ assembly.status_str }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Сборщик:</th>
+                                        <td>{{ assembly.assembler|default:"Не указан" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Дата создания:</th>
+                                        <td>{{ assembly.created_at|date:"d.m.Y H:i" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Последнее обновление:</th>
+                                        <td>{{ assembly.timestamp|date:"d.m.Y H:i" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Источник:</th>
+                                        <td>{{ assembly.source_system }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Товары сборки -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Несобранные товары ({{ products|length }})</h5>
+                        <span class="badge badge-danger">Всего недостает: {{ total_missing }} шт.</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>LM код</th>
+                                        <th>Отдел</th>
+                                        <th>Название</th>
+                                        <th>Изображение</th>
+                                        <th>Требуется</th>
+                                        <th>Собрано</th>
+                                        <th>Не хватает</th>
+                                        <th>Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in products %}
+                                    <tr class="{% if product.is_critical %}table-danger{% endif %}">
+                                        <td><code>{{ product.lm_code }}</code></td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if product.department_id == '6' %}badge-danger
+                                                {% elif product.department_id == '9' %}badge-warning
+                                                {% else %}badge-info{% endif %}">
+                                                {{ product.department_id|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="text-truncate" style="max-width: 200px;">
+                                                {{ product.title|default:"Без названия" }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if product.image_url %}
+                                                <a href="{{ product.image_url }}" target="_blank">
+                                                    <img src="{{ product.image_url }}" 
+                                                         class="img-thumbnail" 
+                                                         style="width: 50px; height: 50px;">
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Нет</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ product.quantity }}</td>
+                                        <td>{{ product.collected_quantity }}</td>
+                                        <td>
+                                            {% if product.missing_quantity > 0 %}
+                                                <span class="badge 
+                                                    {% if product.is_critical %}badge-danger
+                                                    {% else %}badge-warning{% endif %} badge-pill">
+                                                    {{ product.missing_quantity }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-success badge-pill">0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if product.is_critical %}
+                                                <span class="badge badge-danger">Критично</span>
+                                            {% elif product.missing_quantity > 0 %}
+                                                <span class="badge badge-warning">В работе</span>
+                                            {% else %}
+                                                <span class="badge badge-success">Готово</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <i class="material-icons md-48 text-muted">shopping_cart</i>
+                                            <h5 class="mt-2">Нет товаров</h5>
+                                            <p class="text-muted">В этой сборке нет несобранных товаров</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Боковая панель со статистикой -->
+            <div class="col-md-4">
+                <!-- Статистика -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Статистика</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="text-muted">Всего товаров</h6>
+                            <h3>{{ products|length }}</h3>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted">Критических товаров</h6>
+                            <h3 class="text-danger">{{ critical_products|length }}</h3>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted">Общее количество недостающих</h6>
+                            <h3>{{ total_missing }}</h3>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted">Процент собранного</h6>
+                            {% if products %}
+                                {% with total_needed=products|length|default:1 %}
+                                    {% with collected_count=products|length|add:"-total_missing" %}
+                                        {% with percent=collected_count|floatformat:2 %}
+                                            <h3>{{ percent }}%</h3>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar 
+                                                    {% if percent < 50 %}bg-danger
+                                                    {% elif percent < 80 %}bg-warning
+                                                    {% else %}bg-success{% endif %}" 
+                                                    style="width: {{ percent }}%"></div>
+                                            </div>
+                                        {% endwith %}
+                                    {% endwith %}
+                                {% endwith %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Быстрые действия -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Действия</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-template btn-block mb-2">
+                            <i class="material-icons md-18">print</i> Распечатать список
+                        </button>
+                        <button class="btn btn-outline-template btn-block mb-2">
+                            <i class="material-icons md-18">assignment</i> Создать задание
+                        </button>
+                        <button class="btn btn-outline-danger btn-block">
+                            <i class="material-icons md-18">flag</i> Пометить как проблемную
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

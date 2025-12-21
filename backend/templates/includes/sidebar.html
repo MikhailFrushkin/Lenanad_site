@@ -1,7 +1,7 @@
 <!-- Sidebar starts -->
 {% load static %}
 <div class="sidebar">
-    <a href="" class="logo">
+    <a href="{% url 'home:index' %}" class="logo">
         <img src="{% static 'assets/img/limonad.svg' %}" alt="" class="logo-icon">
         <div class="logo-text">
             <h5 class="fs22 mb-0">Lemanad <sup class="badge badge-danger">PRO</sup></h5>
@@ -22,7 +22,7 @@
     </ul>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'home:index' %}"><i
+            <a class="nav-link" href="{% url 'particles:particles_main' %}"><i
                     class="material-icons icon">turned_in_not</i><span>Частички</span></a>
         </li>
     </ul>

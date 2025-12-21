@@ -7,6 +7,7 @@ from backend import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('user/', include('users.urls', namespace="users")),
+    path('particles/', include('particles.urls', namespace="particles")),
     path('', include('home.urls', namespace="home")),
 ]
 

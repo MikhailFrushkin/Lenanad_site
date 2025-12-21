@@ -48,22 +48,16 @@
         <!-- Navigation -->
         {% include 'includes/nav.html' %}
 
-        <!-- Main container starts -->
-        <div class="container main-container" id="main-container">
-            {% block content %}
-            <div class="row">
-                <div class="col-12">
-                    <h1>Ваш контент здесь</h1>
-                    <p>Это основное содержимое страницы</p>
-                </div>
+        {% block content %}
+        <div class="row">
+            <div class="col-12">
+                <h1>Ваш контент здесь</h1>
+                <p>Это основное содержимое страницы</p>
             </div>
-            {% endblock %}
         </div>
-        <!-- Main container ends -->
-
+        {% endblock %}
     </div>
 
-    <!-- Footer -->
     {% include 'includes/footer.html' %}
 </div>
 
