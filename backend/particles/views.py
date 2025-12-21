@@ -2,7 +2,9 @@ from pprint import pprint
 
 import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
+from django.db.models import Count, Sum, Avg, Max
+from django.db.models.functions import TruncDate, ExtractHour
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.generic import TemplateView
 from loguru import logger
@@ -85,7 +87,7 @@ class ReceivePartiallyPickedAssembliesView(APIView):
 
 
 class ParticlesTable(LoginRequiredMixin, TemplateView):
-    template_name = "particles.html"
+    template_name = "particles/particles.html"
     login_url = "home:login"
 
     def get_context_data(self, **kwargs):
@@ -150,8 +152,6 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         context['total_assemblies'] = assemblies.count()
 
         context['unique_assemblers'] = list(set(i.get("assembler") for i in assemblies.values('assembler')))
-        pprint(context['unique_assemblers'] )
-        # Для зон и отделов тоже добавляем distinct() и order_by()
         context['unique_zones'] = assemblies.values('assembly_zone').distinct().order_by('assembly_zone')
         context['unique_departments'] = PartiallyPickedProduct.objects.values('department_id').exclude(
             department_id__isnull=True
@@ -169,7 +169,7 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
 
 
 class AssemblyDetailView(LoginRequiredMixin, TemplateView):
-    template_name = "assembly_detail.html"
+    template_name = "particles/assembly_detail.html"
     login_url = "home:login"
 
     def get_context_data(self, **kwargs):
@@ -278,3 +278,476 @@ def export_assemblies_to_excel(request):
             worksheet.column_dimensions[chr(65 + col_idx)].width = min(column_width + 2, 50)
 
     return response
+
+
+class StatisticsDashboard(LoginRequiredMixin, TemplateView):
+    """Дашборд статистики по частичным сборкам"""
+    template_name = "particles/dashboard.html"
+    login_url = "home:login"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Параметры периода
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        assembler = self.request.GET.get('assembler')
+        department_id = self.request.GET.get('department_id')
+
+        # Базовые QuerySet'ы
+        assemblies = PartiallyPickedAssembly.objects.all()
+        products = PartiallyPickedProduct.objects.all()
+
+        # Применяем фильтры
+        if date_from:
+            assemblies = assemblies.filter(timestamp__date__gte=date_from)
+            products = products.filter(assembly__timestamp__date__gte=date_from)
+
+        if date_to:
+            assemblies = assemblies.filter(timestamp__date__lte=date_to)
+            products = products.filter(assembly__timestamp__date__lte=date_to)
+
+        if assembler:
+            assemblies = assemblies.filter(assembler__icontains=assembler)
+            products = products.filter(assembly__assembler__icontains=assembler)
+
+        if department_id:
+            products = products.filter(department_id=department_id)
+            assemblies = assemblies.filter(products__department_id=department_id).distinct()
+
+        # 1. Общая статистика за период
+        context['total_stats'] = self.get_total_stats(assemblies, products)
+
+        # 2. Статистика по сборщикам
+        context['assembler_stats'] = self.get_assembler_stats(assemblies)
+
+        # 3. Статистика по товарам
+        context['product_stats'] = self.get_product_stats(products)
+
+        # 4. Статистика по отделам
+        context['department_stats'] = self.get_department_stats(products)
+
+        # 5. Временная статистика (по дням, часам)
+        context['time_stats'] = self.get_time_stats(assemblies)
+
+        # 6. Критические товары
+        context['critical_stats'] = self.get_critical_stats(products)
+
+        # Фильтры для отображения
+        context['date_from'] = date_from
+        context['date_to'] = date_to
+        context['assembler'] = assembler
+        context['department_id'] = department_id
+
+        # Уникальные значения для фильтров
+        context['unique_assemblers'] = PartiallyPickedAssembly.objects.values(
+            'assembler'
+        ).exclude(assembler__isnull=True).exclude(assembler='').distinct().order_by('assembler')
+
+        context['unique_departments'] = PartiallyPickedProduct.objects.values(
+            'department_id'
+        ).exclude(department_id__isnull=True).exclude(department_id='').distinct().order_by('department_id')
+
+        return context
+
+    def get_total_stats(self, assemblies, products):
+        """Общая статистика за период"""
+        total_assemblies = assemblies.count()
+        total_products = products.count()
+
+        # Сборки с товарами и без
+        assemblies_with_products = assemblies.filter(products_count__gt=0).count()
+        assemblies_without_products = total_assemblies - assemblies_with_products
+
+        # Товарная статистика
+        total_missing_quantity = products.aggregate(
+            total=Sum('missing_quantity')
+        )['total'] or 0
+
+        total_required_quantity = products.aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+
+        total_collected_quantity = products.aggregate(
+            total=Sum('collected_quantity')
+        )['total'] or 0
+
+        # Критические товары
+        critical_products = products.filter(is_critical=True).count()
+
+        return {
+            'total_assemblies': total_assemblies,
+            'total_products': total_products,
+            'assemblies_with_products': assemblies_with_products,
+            'assemblies_without_products': assemblies_without_products,
+            'total_missing_quantity': total_missing_quantity,
+            'total_required_quantity': total_required_quantity,
+            'total_collected_quantity': total_collected_quantity,
+            'collection_rate': (total_collected_quantity / total_required_quantity * 100
+                                if total_required_quantity > 0 else 0),
+            'critical_products': critical_products,
+            'critical_percentage': (critical_products / total_products * 100
+                                    if total_products > 0 else 0),
+        }
+
+    def get_assembler_stats(self, assemblies):
+        """Статистика по сборщикам"""
+        stats = assemblies.values('assembler').annotate(
+            assembly_count=Count('id'),
+            total_products=Sum('products_count'),
+            total_missing=Sum('total_missing_quantity'),
+            avg_products_per_assembly=Avg('products_count'),
+            last_activity=Max('timestamp'),
+        ).order_by('-assembly_count')
+
+        # Рассчитываем дополнительные метрики
+        for item in stats:
+            # Среднее время между сборками
+            assembler_assemblies = assemblies.filter(assembler=item['assembler'])
+            if assembler_assemblies.count() > 1:
+                time_diffs = []
+                prev_time = None
+                for assembly in assembler_assemblies.order_by('timestamp'):
+                    if prev_time:
+                        time_diffs.append((assembly.timestamp - prev_time).total_seconds() / 60)  # в минутах
+                    prev_time = assembly.timestamp
+                if time_diffs:
+                    item['avg_time_between'] = sum(time_diffs) / len(time_diffs)
+                else:
+                    item['avg_time_between'] = 0
+            else:
+                item['avg_time_between'] = None
+
+            # Часы пиковой активности
+            hours = assembler_assemblies.annotate(
+                hour=ExtractHour('timestamp')
+            ).values('hour').annotate(
+                count=Count('id')
+            ).order_by('-count')
+
+            if hours.exists():
+                peak_hour = hours.first()
+                item['peak_hour'] = f"{peak_hour['hour']}:00"
+                item['peak_hour_count'] = peak_hour['count']
+            else:
+                item['peak_hour'] = None
+                item['peak_hour_count'] = 0
+
+        return list(stats)
+
+    def get_product_stats(self, products):
+        """Статистика по товарам"""
+        # Топ товаров по количеству недостачи
+        top_by_missing = products.values('lm_code', 'title', 'department_id').annotate(
+            total_missing=Sum('missing_quantity'),
+            occurrences=Count('id'),
+            avg_missing=Avg('missing_quantity'),
+            max_missing=Max('missing_quantity'),
+            assemblies_count=Count('assembly', distinct=True),
+            assemblers_count=Count('assembly__assembler', distinct=True),
+        ).order_by('-total_missing')[:20]
+
+        # Товары с повторными попаданиями в течение суток
+        # Для этого нужен более сложный запрос
+        repeated_products = []
+        today = timezone.now().date()
+
+        for product in products.filter(assembly__timestamp__date=today).values(
+                'lm_code', 'title', 'department_id'
+        ).annotate(
+            today_count=Count('id')
+        ).filter(today_count__gt=1):
+            # Получаем подробности о повторениях
+            product_details = products.filter(
+                lm_code=product['lm_code'],
+                assembly__timestamp__date=today
+            ).values('assembly__order_number', 'missing_quantity',
+                     'assembly__timestamp', 'assembly__assembler')
+
+            repeated_products.append({
+                'lm_code': product['lm_code'],
+                'title': product['title'],
+                'department_id': product['department_id'],
+                'today_count': product['today_count'],
+                'details': list(product_details),
+            })
+
+        # Частота появления товаров
+        frequency_stats = products.values('lm_code', 'title').annotate(
+            total_occurrences=Count('id'),
+            days_active=Count('assembly__timestamp__date', distinct=True),
+            avg_per_day=Count('id') / Count('assembly__timestamp__date', distinct=True),
+            last_seen=Max('assembly__timestamp'),
+        ).order_by('-total_occurrences')[:15]
+
+        return {
+            'top_by_missing': list(top_by_missing),
+            'repeated_today': repeated_products,
+            'frequency_stats': list(frequency_stats),
+        }
+
+    def get_department_stats(self, products):
+        """Статистика по отделам"""
+        stats = products.values('department_id').exclude(
+            department_id__isnull=True
+        ).exclude(
+            department_id=''
+        ).annotate(
+            product_count=Count('id'),
+            total_missing=Sum('missing_quantity'),
+            total_required=Sum('quantity'),
+            total_collected=Sum('collected_quantity'),
+            avg_missing=Avg('missing_quantity'),
+            unique_products=Count('lm_code', distinct=True),
+            unique_assemblies=Count('assembly', distinct=True),
+            unique_assemblers=Count('assembly__assembler', distinct=True),
+        ).order_by('-total_missing')
+
+        # Рассчитываем проценты
+        for item in stats:
+            if item['total_required'] > 0:
+                item['collection_rate'] = (item['total_collected'] / item['total_required'] * 100)
+            else:
+                item['collection_rate'] = 0
+
+            if item['product_count'] > 0:
+                item['avg_per_assembly'] = item['product_count'] / item['unique_assemblies']
+            else:
+                item['avg_per_assembly'] = 0
+
+        return list(stats)
+
+    def get_time_stats(self, assemblies):
+        """Статистика по времени"""
+        # По дням
+        daily_stats = assemblies.annotate(
+            date=TruncDate('timestamp')
+        ).values('date').annotate(
+            count=Count('id'),
+            total_products=Sum('products_count'),
+            total_missing=Sum('total_missing_quantity'),
+        ).order_by('date')
+
+        # По часам (среднее за период)
+        hourly_stats = assemblies.annotate(
+            hour=ExtractHour('timestamp')
+        ).values('hour').annotate(
+            count=Count('id'),
+            avg_products=Avg('products_count'),
+            avg_missing=Avg('total_missing_quantity'),
+        ).order_by('hour')
+
+        # Тренды
+        trend_data = []
+        current_date = None
+        current_count = 0
+        for stat in daily_stats:
+            if stat['date'] != current_date:
+                if current_date:
+                    trend_data.append({
+                        'date': current_date,
+                        'count': current_count
+                    })
+                current_date = stat['date']
+                current_count = 0
+            current_count += stat['count']
+
+        if current_date:
+            trend_data.append({
+                'date': current_date,
+                'count': current_count
+            })
+
+        return {
+            'daily': list(daily_stats),
+            'hourly': list(hourly_stats),
+            'trend': trend_data,
+        }
+
+    def get_critical_stats(self, products):
+        """Статистика по критическим товарам"""
+        critical = products.filter(is_critical=True)
+
+        # По отделам
+        by_department = critical.values('department_id').annotate(
+            count=Count('id'),
+            total_missing=Sum('missing_quantity'),
+            avg_missing=Avg('missing_quantity'),
+        ).order_by('-count')
+
+        # По сборщикам
+        by_assembler = critical.values('assembly__assembler').annotate(
+            count=Count('id'),
+            total_missing=Sum('missing_quantity'),
+        ).order_by('-count')
+
+        # По товарам
+        by_product = critical.values('lm_code', 'title').annotate(
+            count=Count('id'),
+            total_missing=Sum('missing_quantity'),
+            assemblies=Count('assembly', distinct=True),
+        ).order_by('-total_missing')[:10]
+
+        # Временное распределение
+        by_time = critical.annotate(
+            date=TruncDate('assembly__timestamp'),
+            hour=ExtractHour('assembly__timestamp')
+        ).values('date', 'hour').annotate(
+            count=Count('id')
+        ).order_by('-count')[:10]
+
+        return {
+            'by_department': list(by_department),
+            'by_assembler': list(by_assembler),
+            'by_product': list(by_product),
+            'by_time': list(by_time),
+            'total_critical': critical.count(),
+        }
+
+
+class StatisticsAPIView(LoginRequiredMixin, TemplateView):
+    """API для динамической загрузки статистики (для графиков)"""
+
+    def get(self, request, *args, **kwargs):
+        chart_type = request.GET.get('chart_type', 'daily_assemblies')
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+
+        # Базовый QuerySet с фильтрами
+        assemblies = PartiallyPickedAssembly.objects.all()
+        products = PartiallyPickedProduct.objects.all()
+
+        if date_from:
+            assemblies = assemblies.filter(timestamp__date__gte=date_from)
+            products = products.filter(assembly__timestamp__date__gte=date_from)
+
+        if date_to:
+            assemblies = assemblies.filter(timestamp__date__lte=date_to)
+            products = products.filter(assembly__timestamp__date__lte=date_to)
+
+        data = {}
+
+        if chart_type == 'daily_assemblies':
+            # Сборки по дням
+            stats = assemblies.annotate(
+                date=TruncDate('timestamp')
+            ).values('date').annotate(
+                count=Count('id')
+            ).order_by('date')
+
+            data = {
+                'labels': [item['date'].strftime('%d.%m') for item in stats],
+                'datasets': [{
+                    'label': 'Количество сборок',
+                    'data': [item['count'] for item in stats],
+                    'borderColor': 'rgb(75, 192, 192)',
+                    'tension': 0.1
+                }]
+            }
+
+        elif chart_type == 'assembler_performance':
+            # Производительность сборщиков
+            stats = assemblies.values('assembler').annotate(
+                count=Count('id'),
+                avg_products=Avg('products_count'),
+                avg_missing=Avg('total_missing_quantity'),
+            ).order_by('-count')[:10]
+
+            data = {
+                'labels': [item['assembler'] or 'Не указан' for item in stats],
+                'datasets': [
+                    {
+                        'label': 'Количество сборок',
+                        'data': [item['count'] for item in stats],
+                        'backgroundColor': 'rgba(255, 99, 132, 0.5)',
+                    },
+                    {
+                        'label': 'Среднее кол-во товаров',
+                        'data': [item['avg_products'] for item in stats],
+                        'backgroundColor': 'rgba(54, 162, 235, 0.5)',
+                    }
+                ]
+            }
+
+        elif chart_type == 'department_distribution':
+            # Распределение по отделам
+            stats = products.values('department_id').annotate(
+                count=Count('id'),
+                total_missing=Sum('missing_quantity'),
+            ).order_by('-count')[:10]
+
+            data = {
+                'labels': [f"Отдел {item['department_id']}" for item in stats],
+                'datasets': [{
+                    'label': 'Количество товаров',
+                    'data': [item['count'] for item in stats],
+                    'backgroundColor': [
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)',
+                    ],
+                }]
+            }
+
+        elif chart_type == 'missing_quantity_trend':
+            # Тренд недостающего количества
+            stats = assemblies.annotate(
+                date=TruncDate('timestamp')
+            ).values('date').annotate(
+                total_missing=Sum('total_missing_quantity'),
+                total_products=Sum('products_count'),
+            ).order_by('date')
+
+            data = {
+                'labels': [item['date'].strftime('%d.%m') for item in stats],
+                'datasets': [
+                    {
+                        'label': 'Недостающее количество',
+                        'data': [item['total_missing'] for item in stats],
+                        'borderColor': 'rgb(255, 99, 132)',
+                        'tension': 0.1
+                    },
+                    {
+                        'label': 'Количество товаров',
+                        'data': [item['total_products'] for item in stats],
+                        'borderColor': 'rgb(54, 162, 235)',
+                        'tension': 0.1
+                    }
+                ]
+            }
+
+        return JsonResponse(data, safe=False)
+
+
+class StatisticsExportView(LoginRequiredMixin, TemplateView):
+    """Экспорт статистики в JSON"""
+
+    def get(self, request, *args, **kwargs):
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+
+        # Собираем все данные
+        dashboard_view = StatisticsDashboard()
+        dashboard_view.request = request
+
+        context = dashboard_view.get_context_data()
+
+        # Формируем структуру для экспорта
+        export_data = {
+            'period': {
+                'date_from': date_from,
+                'date_to': date_to,
+                'generated_at': timezone.now().isoformat(),
+            },
+            'total_statistics': context['total_stats'],
+            'assembler_statistics': context['assembler_stats'],
+            'department_statistics': context['department_stats'],
+            'product_statistics': context['product_stats'],
+            'critical_statistics': context['critical_stats'],
+        }
+
+        response = JsonResponse(export_data, json_dumps_params={'indent': 2})
+        response['Content-Disposition'] = f'attachment; filename="statistics_{date_from}_{date_to}.json"'
+        return response

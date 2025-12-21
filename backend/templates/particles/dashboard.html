@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Статистика частичных сборок</h1>
+    
+    <!-- Фильтры -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Параметры фильтрации</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="date_from" class="form-label">Дата с</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_to" class="form-label">Дата по</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="assembler" class="form-label">Сборщик</label>
+                    <select class="form-select" id="assembler" name="assembler">
+                        <option value="">Все сборщики</option>
+                        {% for assembler in unique_assemblers %}
+                            <option value="{{ assembler.assembler }}" 
+                                    {% if filter_assembler == assembler.assembler %}selected{% endif %}>
+                                {{ assembler.assembler }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="department_id" class="form-label">Отдел</label>
+                    <select class="form-select" id="department_id" name="department_id">
+                        <option value="">Все отделы</option>
+                        {% for dept in unique_departments %}
+                            <option value="{{ dept.department_id }}" 
+                                    {% if filter_department == dept.department_id %}selected{% endif %}>
+                                Отдел {{ dept.department_id }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Применить</button>
+                    <a href="{% url 'particles:statistics_dashboard' %}" class="btn btn-secondary">Сбросить</a>
+                    <a href="{% url 'particles:statistics_export' %}?{{ request.GET.urlencode }}"
+                       class="btn btn-success float-end">Экспорт JSON</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Общая статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Всего сборок</h5>
+                    <h2 class="card-text">{{ total_stats.total_assemblies }}</h2>
+                    <p class="card-text">
+                        С товарами: {{ total_stats.assemblies_with_products }}<br>
+                        Без товаров: {{ total_stats.assemblies_without_products }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Товары</h5>
+                    <h2 class="card-text">{{ total_stats.total_products }}</h2>
+                    <p class="card-text">
+                        Собрано: {{ total_stats.total_collected_quantity }}<br>
+                        Процент сбора: {{ total_stats.collection_rate|floatformat:1 }}%
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Недостача</h5>
+                    <h2 class="card-text">{{ total_stats.total_missing_quantity }}</h2>
+                    <p class="card-text">
+                        Критических: {{ total_stats.critical_products }}<br>
+                        {{ total_stats.critical_percentage|floatformat:1 }}% от всех
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Эффективность</h5>
+                    <h2 class="card-text">{{ total_stats.total_required_quantity }}</h2>
+                    <p class="card-text">
+                        Требовалось всего<br>
+                        Среднее на сборку: {{ total_stats.total_products|divide:total_stats.total_assemblies|floatformat:1 }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Графики -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Сборки по дням</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="dailyChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Топ сборщиков</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="assemblerChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статистика по сборщикам -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Статистика по сборщикам</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Сборщик</th>
+                            <th>Сборок</th>
+                            <th>Товаров</th>
+                            <th>Недостача</th>
+                            <th>Среднее на сборку</th>
+                            <th>Пиковый час</th>
+                            <th>Последняя активность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in assembler_stats %}
+                        <tr>
+                            <td>{{ stat.assembler|default:"Не указан" }}</td>
+                            <td>{{ stat.assembly_count }}</td>
+                            <td>{{ stat.total_products|default:0 }}</td>
+                            <td class="{% if stat.total_missing > 100 %}text-danger{% endif %}">
+                                {{ stat.total_missing|default:0 }}
+                            </td>
+                            <td>{{ stat.avg_products_per_assembly|floatformat:1 }}</td>
+                            <td>{{ stat.peak_hour|default:"-" }}</td>
+                            <td>{{ stat.last_activity|date:"d.m.Y H:i"|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">Нет данных</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статистика по отделам -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Статистика по отделам</h5>
+            <span class="badge bg-primary">Отделов: {{ department_stats|length }}</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Отдел</th>
+                            <th>Товаров</th>
+                            <th>Недостача</th>
+                            <th>Уникальных товаров</th>
+                            <th>Сборок</th>
+                            <th>Сборщиков</th>
+                            <th>% сбора</th>
+                            <th>Среднее на сборку</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in department_stats %}
+                        <tr>
+                            <td>{{ stat.department_id }}</td>
+                            <td>{{ stat.product_count }}</td>
+                            <td class="{% if stat.total_missing > 500 %}text-danger{% endif %}">
+                                {{ stat.total_missing }}
+                            </td>
+                            <td>{{ stat.unique_products }}</td>
+                            <td>{{ stat.unique_assemblies }}</td>
+                            <td>{{ stat.unique_assemblers }}</td>
+                            <td class="{% if stat.collection_rate < 80 %}text-warning{% endif %}">
+                                {{ stat.collection_rate|floatformat:1 }}%
+                            </td>
+                            <td>{{ stat.avg_per_assembly|floatformat:1 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">Нет данных</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Критические товары -->
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Критические товары (недостача > 5)</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>По отделам:</h6>
+                    <ul class="list-group">
+                        {% for item in critical_stats.by_department|slice:":5" %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Отдел {{ item.department_id|default:"Не указан" }}
+                            <span class="badge bg-danger rounded-pill">{{ item.count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Топ товаров:</h6>
+                    <ul class="list-group">
+                        {% for item in critical_stats.by_product|slice:":5" %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ item.lm_code }}</strong><br>
+                                    <small>{{ item.title|truncatechars:50 }}</small>
+                                </div>
+                                <span class="badge bg-danger align-self-start">
+                                    {{ item.total_missing }}
+                                </span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-3 text-center">
+                <small class="text-muted">
+                    Всего критических товаров: {{ critical_stats.total_critical }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript для графиков -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Загрузка данных через AJAX
+    function loadChartData(chartType, canvasId) {
+        const url = `{% url 'particles:statistics_api' %}?chart_type=${chartType}&{{ request.GET.urlencode }}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                new Chart(ctx, {
+                    type: chartType.includes('trend') ? 'line' : 'bar',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            });
+    }
+    
+    // Загрузка графиков
+    loadChartData('daily_assemblies', 'dailyChart');
+    loadChartData('assembler_performance', 'assemblerChart');
+});
+</script>
+
+<!-- Кастомный тег для деления (нужно добавить в templatetags) -->
+{% load custom_filters %}
+{% endblock %}

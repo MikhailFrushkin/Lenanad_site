@@ -15,5 +15,7 @@ urlpatterns = [
     path('partially_picked_assemblies/',
          views.ReceivePartiallyPickedAssembliesView.as_view(),
          name='receive-partially-picked'),
-
+    path('statistics/', views.StatisticsDashboard.as_view(), name='statistics_dashboard'),
+    path('statistics/api/', views.StatisticsAPIView.as_view(), name='statistics_api'),
+    path('statistics/export/', views.StatisticsExportView.as_view(), name='statistics_export'),
 ]

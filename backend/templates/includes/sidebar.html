@@ -22,8 +22,13 @@
     </ul>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'particles:particles_main' %}"><i
-                    class="material-icons icon">turned_in_not</i><span>Частички</span></a>
+            <a class="nav-link dropdown-toggle active" href="javascript:void(0)"><i class="material-icons icon">turned_in_not</i><span>Частички</span>
+                <i class="material-icons arrow">expand_more</i></a>
+            <div class="nav flex-column" style="display: none;">
+                <div class="nav-item"><a class="nav-link" href="{% url 'particles:particles_main' %}"><span>Таблица с частичками</span></a>
+                </div>
+                <div class="nav-item"><a class="nav-link" href="{% url 'particles:statistics_dashboard' %}"><span>Статистика</span></a></div>
+            </div>
         </li>
     </ul>
     <ul class="nav flex-column">
