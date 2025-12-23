@@ -1,10 +1,12 @@
 from pprint import pprint
 
 import pandas as pd
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Sum, Avg, Max
 from django.db.models.functions import TruncDate, ExtractHour
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import TemplateView
 from loguru import logger
@@ -103,7 +105,7 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         assembly_zone = self.request.GET.get('assembly_zone')
 
         # Базовый QuerySet с префетчем
-        assemblies = PartiallyPickedAssembly.objects.prefetch_related('products').all()
+        assemblies = PartiallyPickedAssembly.objects.filter(black_list=False).prefetch_related('products').all()
 
         # Применяем фильтры
         if assembler:
@@ -127,7 +129,7 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         # Создаем плоский список для таблицы
         table_data = []
         for assembly in assemblies.order_by("-created_at", "order_number", "task_id"):
-            products = assembly.products.all()
+            products = assembly.products.filter(black_list=False)
 
             if department_id:
                 products = products.filter(department_id=department_id)
@@ -139,13 +141,13 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
                         'product': product,
                         'is_first_product': True,
                     })
-            else:
-                if not department_id:
-                    table_data.append({
-                        'assembly': assembly,
-                        'product': None,
-                        'is_first_product': True,
-                    })
+            # else:
+            #     if not department_id:
+            #         table_data.append({
+            #             'assembly': assembly,
+            #             'product': None,
+            #             'is_first_product': True,
+            #         })
 
         context['table_data'] = table_data
         context['total_rows'] = len(table_data)
@@ -183,7 +185,7 @@ class AssemblyDetailView(LoginRequiredMixin, TemplateView):
             context['assembly'] = assembly
 
             # Статистика по товарам
-            products = assembly.products.all()
+            products = assembly.products.filter(black_list=False)
             context['products'] = products
             context['critical_products'] = products.filter(is_critical=True)
             context['total_missing'] = sum(p.missing_quantity for p in products)
@@ -193,6 +195,29 @@ class AssemblyDetailView(LoginRequiredMixin, TemplateView):
 
         return context
 
+
+def product_blacklist(request, pk):
+    """Добавить товар в черный список"""
+    try:
+        product = get_object_or_404(PartiallyPickedProduct, id=pk)
+        product.mark_as_blacklisted()  # Используем новый метод
+        messages.success(request, f'Товар {product.lm_code} добавлен в черный список')
+    except Exception as e:
+        messages.error(request, f'Ошибка: {e}')
+
+    return redirect("particles:particles_main")
+
+
+def product_remove_blacklist(request, pk):
+    """Убрать товар из черного списка"""
+    try:
+        product = get_object_or_404(PartiallyPickedProduct, id=pk)
+        product.remove_from_blacklist()  # Используем новый метод
+        messages.success(request, f'Товар {product.lm_code} убран из черного списка')
+    except Exception as e:
+        messages.error(request, f'Ошибка: {e}')
+
+    return redirect("particles:particles_main")
 
 def export_assemblies_to_excel(request):
     """Экспорт в Excel с использованием pandas"""
@@ -279,7 +304,7 @@ def export_assemblies_to_excel(request):
 
     return response
 
-
+#Статистика
 class StatisticsDashboard(LoginRequiredMixin, TemplateView):
     """Дашборд статистики по частичным сборкам"""
     template_name = "particles/dashboard.html"
@@ -751,3 +776,5 @@ class StatisticsExportView(LoginRequiredMixin, TemplateView):
         response = JsonResponse(export_data, json_dumps_params={'indent': 2})
         response['Content-Disposition'] = f'attachment; filename="statistics_{date_from}_{date_to}.json"'
         return response
+
+

@@ -109,7 +109,7 @@ class PartiallyPickedAssembly(models.Model):
 
     def update_metrics(self):
         """Обновляет вычисляемые метрики на основе связанных продуктов"""
-        products = self.products.all()
+        products = self.products.filter(black_list=False)
         self.products_count = products.count()
         self.total_missing_quantity = sum(
             product.missing_quantity for product in products
@@ -190,7 +190,10 @@ class PartiallyPickedProduct(models.Model):
         verbose_name="Критический товар",
         default=False
     )
-
+    black_list = models.BooleanField(
+        verbose_name="игнорирование",
+        default=False
+    )
     created_at = models.DateTimeField(
         verbose_name="Время создания записи",
         auto_now_add=True
@@ -261,3 +264,19 @@ class PartiallyPickedProduct(models.Model):
         assembly = self.assembly
         super().delete(*args, **kwargs)
         assembly.update_metrics()
+
+    def mark_as_blacklisted(self):
+        """Пометить товар как игнорируемый"""
+        self.black_list = True
+        self.save()
+        # Обновляем метрики родительской сборки
+        self.assembly.update_metrics()
+        return self
+
+    def remove_from_blacklist(self):
+        """Убрать товар из черного списка"""
+        self.black_list = False
+        self.save()
+        # Обновляем метрики родительской сборки
+        self.assembly.update_metrics()
+        return self

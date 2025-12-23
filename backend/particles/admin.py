@@ -69,19 +69,19 @@ class PartiallyPickedAssemblyAdmin(admin.ModelAdmin):
 class PartiallyPickedProductAdmin(admin.ModelAdmin):
     list_display = ['lm_code', 'title_short', 'assembly_link',
                     'quantity', 'collected_quantity',
-                    'missing_quantity', 'is_critical', 'updated_at']
-    list_filter = ['is_critical', 'department_id', 'created_at', 'updated_at']
+                    'missing_quantity', 'black_list', 'updated_at']
+    list_filter = ['black_list', 'department_id', 'created_at', 'updated_at']
     search_fields = ['lm_code', 'title', 'assembly__order_number']
-    readonly_fields = ['missing_quantity', 'is_critical', 'created_at', 'updated_at']
+    readonly_fields = ['missing_quantity', 'created_at', 'updated_at']
 
     actions = [check_product_duplicates]
 
     fieldsets = (
         ('Основная информация', {
-            'fields': ('assembly', 'lm_code', 'title', 'department_id')
+            'fields': ('assembly', 'lm_code', 'title', 'department_id', 'black_list')
         }),
         ('Количественные показатели', {
-            'fields': ('quantity', 'collected_quantity', 'missing_quantity', 'is_critical')
+            'fields': ('quantity', 'collected_quantity', 'missing_quantity')
         }),
         ('Дополнительно', {
             'fields': ('image_url', 'source')

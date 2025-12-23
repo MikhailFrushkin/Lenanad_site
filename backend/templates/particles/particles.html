@@ -262,9 +262,11 @@ function exportTableToExcel(event) {
                                             <i class="material-icons md-18">print</i> Печать
                                         </a>
                                         <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item text-danger" href="#">
+                                        {% if row.product.id%}
+                                        <a class="dropdown-item text-danger" href="{% url 'particles:product_blacklist' row.product.id %}">
                                             <i class="material-icons md-18">delete</i> Удалить
                                         </a>
+                                        {% endif %}
                                     </div>
                                 </div>
                             {% endif %}
