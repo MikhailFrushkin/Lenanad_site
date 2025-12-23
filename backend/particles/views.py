@@ -103,7 +103,8 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         date_to = self.request.GET.get('date_to')
         department_id = self.request.GET.get('department_id')
         assembly_zone = self.request.GET.get('assembly_zone')
-
+        logger.debug(date_from)
+        logger.debug(date_to)
         # Базовый QuerySet с префетчем
         assemblies = PartiallyPickedAssembly.objects.filter(black_list=False).prefetch_related('products').all()
 
@@ -115,10 +116,10 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
             assemblies = assemblies.filter(order_number=order_number)
 
         if date_from:
-            assemblies = assemblies.filter(timestamp__date__gte=date_from)
+            assemblies = assemblies.filter(created_at__date__gte=date_from)
 
         if date_to:
-            assemblies = assemblies.filter(timestamp__date__lte=date_to)
+            assemblies = assemblies.filter(created_at__date__lte=date_to)
 
         if department_id:
             assemblies = assemblies.filter(products__department_id=department_id).distinct()
@@ -325,12 +326,12 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
 
         # Применяем фильтры
         if date_from:
-            assemblies = assemblies.filter(timestamp__date__gte=date_from)
-            products = products.filter(assembly__timestamp__date__gte=date_from)
+            assemblies = assemblies.filter(created_at__date__gte=date_from)
+            products = products.filter(assembly__created_at__date__gte=date_from)
 
         if date_to:
-            assemblies = assemblies.filter(timestamp__date__lte=date_to)
-            products = products.filter(assembly__timestamp__date__lte=date_to)
+            assemblies = assemblies.filter(created_at__date__lte=date_to)
+            products = products.filter(assembly__created_at__date__lte=date_to)
 
         if assembler:
             assemblies = assemblies.filter(assembler__icontains=assembler)
@@ -422,7 +423,7 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
             total_products=Sum('products_count'),
             total_missing=Sum('total_missing_quantity'),
             avg_products_per_assembly=Avg('products_count'),
-            last_activity=Max('timestamp'),
+            last_activity=Max('created_at'),
         ).order_by('-assembly_count')
 
         # Рассчитываем дополнительные метрики
@@ -432,10 +433,10 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
             if assembler_assemblies.count() > 1:
                 time_diffs = []
                 prev_time = None
-                for assembly in assembler_assemblies.order_by('timestamp'):
+                for assembly in assembler_assemblies.order_by('created_at'):
                     if prev_time:
-                        time_diffs.append((assembly.timestamp - prev_time).total_seconds() / 60)  # в минутах
-                    prev_time = assembly.timestamp
+                        time_diffs.append((assembly.created_at - prev_time).total_seconds() / 60)  # в минутах
+                    prev_time = assembly.created_at
                 if time_diffs:
                     item['avg_time_between'] = sum(time_diffs) / len(time_diffs)
                 else:
@@ -445,7 +446,7 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
 
             # Часы пиковой активности
             hours = assembler_assemblies.annotate(
-                hour=ExtractHour('timestamp')
+                hour=ExtractHour('created_at')
             ).values('hour').annotate(
                 count=Count('id')
             ).order_by('-count')
@@ -477,7 +478,7 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
         repeated_products = []
         today = timezone.now().date()
 
-        for product in products.filter(assembly__timestamp__date=today).values(
+        for product in products.filter(assembly__created_at__date=today).values(
                 'lm_code', 'title', 'department_id'
         ).annotate(
             today_count=Count('id')
@@ -485,9 +486,9 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
             # Получаем подробности о повторениях
             product_details = products.filter(
                 lm_code=product['lm_code'],
-                assembly__timestamp__date=today
+                assembly__created_at__date=today
             ).values('assembly__order_number', 'missing_quantity',
-                     'assembly__timestamp', 'assembly__assembler')
+                     'assembly__created_at', 'assembly__assembler')
 
             repeated_products.append({
                 'lm_code': product['lm_code'],
@@ -500,9 +501,9 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
         # Частота появления товаров
         frequency_stats = products.values('lm_code', 'title').annotate(
             total_occurrences=Count('id'),
-            days_active=Count('assembly__timestamp__date', distinct=True),
-            avg_per_day=Count('id') / Count('assembly__timestamp__date', distinct=True),
-            last_seen=Max('assembly__timestamp'),
+            days_active=Count('assembly__created_at__date', distinct=True),
+            avg_per_day=Count('id') / Count('assembly__created_at__date', distinct=True),
+            last_seen=Max('assembly__created_at'),
         ).order_by('-total_occurrences')[:15]
 
         return {
@@ -546,7 +547,7 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
         """Статистика по времени"""
         # По дням
         daily_stats = assemblies.annotate(
-            date=TruncDate('timestamp')
+            date=TruncDate('created_at')
         ).values('date').annotate(
             count=Count('id'),
             total_products=Sum('products_count'),
@@ -555,7 +556,7 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
 
         # По часам (среднее за период)
         hourly_stats = assemblies.annotate(
-            hour=ExtractHour('timestamp')
+            hour=ExtractHour('created_at')
         ).values('hour').annotate(
             count=Count('id'),
             avg_products=Avg('products_count'),
@@ -615,8 +616,8 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
 
         # Временное распределение
         by_time = critical.annotate(
-            date=TruncDate('assembly__timestamp'),
-            hour=ExtractHour('assembly__timestamp')
+            date=TruncDate('assembly__created_at'),
+            hour=ExtractHour('assembly__created_at')
         ).values('date', 'hour').annotate(
             count=Count('id')
         ).order_by('-count')[:10]
@@ -643,19 +644,19 @@ class StatisticsAPIView(LoginRequiredMixin, TemplateView):
         products = PartiallyPickedProduct.objects.all()
 
         if date_from:
-            assemblies = assemblies.filter(timestamp__date__gte=date_from)
-            products = products.filter(assembly__timestamp__date__gte=date_from)
+            assemblies = assemblies.filter(created_at__date__gte=date_from)
+            products = products.filter(assembly__created_at__date__gte=date_from)
 
         if date_to:
-            assemblies = assemblies.filter(timestamp__date__lte=date_to)
-            products = products.filter(assembly__timestamp__date__lte=date_to)
+            assemblies = assemblies.filter(created_at__date__lte=date_to)
+            products = products.filter(assembly__created_at__date__lte=date_to)
 
         data = {}
 
         if chart_type == 'daily_assemblies':
             # Сборки по дням
             stats = assemblies.annotate(
-                date=TruncDate('timestamp')
+                date=TruncDate('created_at')
             ).values('date').annotate(
                 count=Count('id')
             ).order_by('date')
@@ -719,7 +720,7 @@ class StatisticsAPIView(LoginRequiredMixin, TemplateView):
         elif chart_type == 'missing_quantity_trend':
             # Тренд недостающего количества
             stats = assemblies.annotate(
-                date=TruncDate('timestamp')
+                date=TruncDate('created_at')
             ).values('date').annotate(
                 total_missing=Sum('total_missing_quantity'),
                 total_products=Sum('products_count'),
