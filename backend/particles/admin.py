@@ -36,8 +36,8 @@ class PartiallyPickedProductInline(admin.TabularInline):
 class PartiallyPickedAssemblyAdmin(admin.ModelAdmin):
     list_display = ['order_number', 'task_id', 'assembler_short',
                     'assembly_zone', 'products_count',
-                    'total_missing_quantity', 'timestamp', 'updated_at']
-    list_filter = ['assembly_zone', 'timestamp', 'updated_at']
+                    'total_missing_quantity', 'black_list', 'updated_at']
+    list_filter = ['assembly_zone', 'black_list', 'updated_at']
     search_fields = ['order_number', 'task_id', 'assembler']
     readonly_fields = ['created_at', 'updated_at', 'products_count', 'total_missing_quantity']
 
@@ -49,7 +49,7 @@ class PartiallyPickedAssemblyAdmin(admin.ModelAdmin):
             'fields': ('order_number', 'task_id', 'status_str')
         }),
         ('Дополнительная информация', {
-            'fields': ('assembly_zone', 'assembler', 'timestamp')
+            'fields': ('assembly_zone', 'assembler', 'timestamp', 'black_list')
         }),
         ('Статистика', {
             'fields': ('products_count', 'total_missing_quantity')

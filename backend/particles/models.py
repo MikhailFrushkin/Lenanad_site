@@ -63,7 +63,10 @@ class PartiallyPickedAssembly(models.Model):
         verbose_name="Общее количество недостающих штук",
         default=0
     )
-
+    black_list = models.BooleanField(
+        verbose_name="игнорирование",
+        default=False
+    )
     created_at = models.DateTimeField(
         verbose_name="Время создания записи",
         auto_now_add=True
