@@ -103,8 +103,6 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         date_to = self.request.GET.get('date_to')
         department_id = self.request.GET.get('department_id')
         assembly_zone = self.request.GET.get('assembly_zone')
-        logger.debug(date_from)
-        logger.debug(date_to)
         # Базовый QuerySet с префетчем
         assemblies = PartiallyPickedAssembly.objects.filter(black_list=False).prefetch_related('products').all()
 
