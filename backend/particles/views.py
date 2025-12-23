@@ -3,8 +3,8 @@ from pprint import pprint
 import pandas as pd
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, Sum, Avg, Max
-from django.db.models.functions import TruncDate, ExtractHour
+from django.db.models import Count, Sum, Avg, Max, IntegerField
+from django.db.models.functions import TruncDate, ExtractHour, Cast
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
@@ -154,10 +154,11 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
 
         context['unique_assemblers'] = list(set(i.get("assembler") for i in assemblies.values('assembler')))
         context['unique_zones'] = assemblies.values('assembly_zone').distinct().order_by('assembly_zone')
-        context['unique_departments'] = PartiallyPickedProduct.objects.values('department_id').exclude(
+        context['unique_departments'] = PartiallyPickedProduct.objects.exclude(
             department_id__isnull=True
-        ).exclude(department_id='').distinct().order_by('department_id')
-
+        ).exclude(department_id='').annotate(
+            dept_id_int=Cast('department_id', IntegerField())
+        ).order_by('dept_id_int').values('department_id').distinct()
         # Параметры фильтров
         context['filter_assembler'] = assembler
         context['filter_order'] = order_number
