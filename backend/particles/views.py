@@ -104,7 +104,8 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         department_id = self.request.GET.get('department_id')
         assembly_zone = self.request.GET.get('assembly_zone')
         # Базовый QuerySet с префетчем
-        assemblies = PartiallyPickedAssembly.objects.filter(black_list=False).prefetch_related('products').all()
+        assemblies = (PartiallyPickedAssembly.objects.filter(black_list=False).exclude(assembly_zone="WH")
+                      .prefetch_related('products').all())
 
         # Применяем фильтры
         if assembler:
@@ -320,8 +321,14 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
         department_id = self.request.GET.get('department_id')
 
         # Базовые QuerySet'ы
-        assemblies = PartiallyPickedAssembly.objects.all()
-        products = PartiallyPickedProduct.objects.all()
+        # Сборки без зоны "WH" с предварительной загрузкой продуктов
+        assemblies = PartiallyPickedAssembly.objects.exclude(
+            assembly_zone="WH"
+        ).prefetch_related('products').all()
+
+        # Для продуктов - получаем только те, что принадлежат отфильтрованным сборкам
+        assemblies_ids = assemblies.values_list('id', flat=True)
+        products = PartiallyPickedProduct.objects.filter(assembly_id__in=assemblies_ids)
 
         # Применяем фильтры
         if date_from:
