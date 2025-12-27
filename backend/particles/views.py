@@ -50,13 +50,13 @@ class ReceivePartiallyPickedAssembliesView(APIView):
             total_products = created_products + updated_products
 
             # Логируем результат
-            logger.info(
-                f"Приняты данные о частично собранных сборках: "
-                f"создано сборок: {created_assemblies}, "
-                f"обновлено сборок: {updated_assemblies}, "
-                f"создано товаров: {created_products}, "
-                f"обновлено товаров: {updated_products}"
-            )
+            # logger.info(
+            #     f"Приняты данные о частично собранных сборках: "
+            #     f"создано сборок: {created_assemblies}, "
+            #     f"обновлено сборок: {updated_assemblies}, "
+            #     f"создано товаров: {created_products}, "
+            #     f"обновлено товаров: {updated_products}"
+            # )
 
             return Response({
                 'status': 'success',
