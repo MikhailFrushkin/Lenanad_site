@@ -280,3 +280,18 @@ class PartiallyPickedProduct(models.Model):
         # Обновляем метрики родительской сборки
         self.assembly.update_metrics()
         return self
+
+    @property
+    def thumbnail_url(self):
+        if not self.image_url:
+            return None
+
+        if 'cdn.lemanapro.ru' in self.image_url:
+            # Cloudinary-style трансформации
+            # Заменяем часть пути для добавления параметров
+            return self.image_url.replace(
+                '/image/upload/',
+                '/image/upload/w_100,h_100,c_fill,q_auto,f_auto/'
+            )
+
+        return self.image_url
