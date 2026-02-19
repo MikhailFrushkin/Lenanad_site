@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # ← добавляем humanize
+    'django.contrib.humanize',
 
     # Сторонние приложения
     'debug_toolbar',

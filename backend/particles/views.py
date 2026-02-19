@@ -104,7 +104,7 @@ class ParticlesTable(LoginRequiredMixin, TemplateView):
         department_id = self.request.GET.get('department_id')
         assembly_zone = self.request.GET.get('assembly_zone')
         # Базовый QuerySet с префетчем
-        assemblies = (PartiallyPickedAssembly.objects.filter(black_list=False).exclude(assembly_zone="WH")
+        assemblies = (PartiallyPickedAssembly.objects.filter(black_list=False, id__in=[58,59]).exclude(assembly_zone="WH")
                       .prefetch_related('products').all())
 
         # Применяем фильтры
@@ -207,7 +207,6 @@ def product_blacklist(request, pk):
         messages.error(request, f'Ошибка: {e}')
 
     return redirect("particles:particles_main")
-
 
 def product_remove_blacklist(request, pk):
     """Убрать товар из черного списка"""
@@ -324,7 +323,7 @@ class StatisticsDashboard(LoginRequiredMixin, TemplateView):
         # Сборки без зоны "WH" с предварительной загрузкой продуктов
         assemblies = PartiallyPickedAssembly.objects.exclude(
             assembly_zone="WH"
-        ).prefetch_related('products').all()
+        ).filter(id__in=[58,59]).prefetch_related('products').all()
 
         # Для продуктов - получаем только те, что принадлежат отфильтрованным сборкам
         assemblies_ids = assemblies.values_list('id', flat=True)
@@ -641,6 +640,7 @@ class StatisticsAPIView(LoginRequiredMixin, TemplateView):
     """API для динамической загрузки статистики (для графиков)"""
 
     def get(self, request, *args, **kwargs):
+        return None
         chart_type = request.GET.get('chart_type', 'daily_assemblies')
         date_from = request.GET.get('date_from')
         date_to = request.GET.get('date_to')
@@ -779,7 +779,7 @@ class StatisticsExportView(LoginRequiredMixin, TemplateView):
             'product_statistics': context['product_stats'],
             'critical_statistics': context['critical_stats'],
         }
-
+        export_data = {}
         response = JsonResponse(export_data, json_dumps_params={'indent': 2})
         response['Content-Disposition'] = f'attachment; filename="statistics_{date_from}_{date_to}.json"'
         return response
